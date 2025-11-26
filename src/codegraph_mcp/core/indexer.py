@@ -8,6 +8,7 @@ Design Reference: design-core-engine.md §2.4
 """
 
 import hashlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +16,10 @@ from typing import Any
 
 from codegraph_mcp.core.parser import ASTParser, ParseResult
 from codegraph_mcp.core.graph import GraphEngine
+
+
+# Type alias for progress callback
+ProgressCallback = Callable[[int, int, Path | None], None]
 
 
 @dataclass
@@ -76,6 +81,7 @@ class Indexer:
         self,
         repo_path: Path,
         incremental: bool = True,
+        progress_callback: ProgressCallback | None = None,
     ) -> IndexResult:
         """
         Index a repository.
@@ -83,6 +89,7 @@ class Indexer:
         Args:
             repo_path: Path to the repository
             incremental: If True, only index changed files
+            progress_callback: Optional callback(current, total, file_path)
             
         Returns:
             IndexResult with statistics
@@ -106,8 +113,14 @@ class Indexer:
             else:
                 files = self._get_all_files(repo_path)
             
+            total_files = len(files)
+            
             # Index each file
-            for file_path in files:
+            for idx, file_path in enumerate(files):
+                # Report progress
+                if progress_callback:
+                    progress_callback(idx, total_files, file_path)
+                
                 try:
                     file_result = await self._index_file(file_path)
                     result.entities_count += len(file_result.entities)
@@ -115,6 +128,10 @@ class Indexer:
                     result.files_indexed += 1
                 except Exception as e:
                     result.errors.append(f"{file_path}: {e}")
+            
+            # Final progress update
+            if progress_callback:
+                progress_callback(total_files, total_files, None)
             
             result.duration_seconds = time.time() - start_time
             

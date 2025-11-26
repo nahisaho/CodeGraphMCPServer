@@ -1,80 +1,69 @@
-# Release Notes - v0.3.0
+# Release Notes - v0.4.0
 
 **Release Date**: 2025-11-27
 
-## 🌐 Language Expansion Release
+## ⚡ CLI Enhancement Release
 
-CodeGraphMCPServer v0.3.0 は、5つの新しいプログラミング言語サポートを追加し、合計11言語に対応しました。
+CodeGraphMCPServer v0.4.0 は、CLIのユーザーエクスペリエンスを大幅に向上させました。
 
 ---
 
 ## ✨ 新機能
 
-### 🆕 5つの新言語サポート
+### 🎨 Rich Progress Display
 
-| 言語 | 拡張子 | 主な抽出対象 |
-|------|--------|-------------|
-| **PHP** | `.php` | class, interface, trait, function, method, namespace |
-| **C#** | `.cs` | class, struct, interface, enum, method, property |
-| **C++** | `.cpp`, `.hpp`, `.h` | class, struct, function, method, namespace, template |
-| **HCL (Terraform)** | `.tf`, `.hcl` | resource, data, variable, output, module, locals |
-| **Ruby** | `.rb`, `.rake` | class, module, method, singleton_method |
+`codegraph-mcp index` コマンドにアニメーション付きプログレス表示を追加：
 
-### 📊 言語サポート一覧 (11言語)
+```
+🔍 CodeGraph Indexer
+Repository: /path/to/project
+Mode: Full
 
-| 言語 | クラス | 関数 | メソッド | インポート | インターフェース | その他 |
-|------|--------|------|----------|-----------|-----------------|--------|
-| Python | ✅ | ✅ | ✅ | ✅ | ✅ (Protocol) | デコレータ |
-| TypeScript | ✅ | ✅ | ✅ | ✅ | ✅ | 型エイリアス |
-| JavaScript | ✅ | ✅ | ✅ | ✅ | - | ES6+, JSX |
-| Rust | ✅ (struct) | ✅ | ✅ (impl) | ✅ | ✅ (trait) | enum |
-| Go | ✅ (struct) | ✅ | ✅ | ✅ | ✅ | レシーバ |
-| Java | ✅ | ✅ | ✅ | ✅ | ✅ | enum |
-| **PHP** | ✅ | ✅ | ✅ | ✅ | ✅ | trait |
-| **C#** | ✅ | - | ✅ | ✅ | ✅ | struct, enum |
-| **C++** | ✅ | ✅ | ✅ | ✅ (include) | - | struct, template |
-| **HCL** | - | - | - | - | - | resource, module |
-| **Ruby** | ✅ | ✅ | ✅ | ✅ (require) | - | module, mixin |
+  Processing: parser.py ━━━━━━━━━━━━━━━━━━━━ 45% 0:00:12
+
+   📊 Indexing Results
+┌───────────────┬────────┐
+│ Entities      │ 941    │
+│ Relations     │ 4741   │
+│ Files Indexed │ 67     │
+│ Duration      │ 29.47s │
+└───────────────┴────────┘
+
+✅ Indexing completed successfully!
+```
+
+**機能:**
+- スピナーアニメーション
+- リアルタイムプログレスバー
+- ファイル処理状況表示
+- カラー付き結果テーブル
 
 ---
 
-## 📦 新しい依存パッケージ
+## ⚡ パフォーマンス実測値
 
-```bash
-pip install codegraph-mcp  # 全言語サポート含む
-```
-
-追加されたtree-sitterパッケージ:
-- `tree-sitter-php>=0.23.0`
-- `tree-sitter-c-sharp>=0.23.0`
-- `tree-sitter-cpp>=0.23.0`
-- `tree-sitter-hcl>=0.23.0`
-- `tree-sitter-ruby>=0.23.0`
-
----
-
-## 🧪 テスト
-
-```
-286 tests passed, 1 skipped
-Coverage: 80%+
-New tests: 73 (PHP: 15, C#: 15, C++: 14, HCL: 13, Ruby: 16)
-```
+| メトリクス | 実測値 | 備考 |
+|-----------|--------|------|
+| インデックス速度 | **32 エンティティ/秒** | 67ファイル, 941エンティティ |
+| ファイル処理速度 | **0.44秒/ファイル** | 11言語混在プロジェクト |
+| 増分インデックス | **< 2秒** | 変更ファイルのみ処理 |
+| クエリレスポンス | **< 2ms** | グラフ検索 |
 
 ---
 
 ## 📈 バージョン履歴
 
-| Version | Date | Languages | Tests |
-|---------|------|-----------|-------|
-| v0.1.0 | 2025-11-26 | 4 (Python, TypeScript, JavaScript, Rust) | 182 |
-| v0.2.0 | 2025-11-27 | 6 (+Go, Java) | 212 |
-| **v0.3.0** | **2025-11-27** | **11 (+PHP, C#, C++, HCL, Ruby)** | **286** |
+| Version | Date | Highlights | Tests |
+|---------|------|------------|-------|
+| v0.1.0 | 2025-11-26 | Initial: Python, TS, JS, Rust | 182 |
+| v0.2.0 | 2025-11-27 | +Go, Java | 212 |
+| v0.3.0 | 2025-11-27 | +PHP, C#, C++, HCL, Ruby (11言語) | 286 |
+| **v0.4.0** | **2025-11-27** | **CLI Progress Display** | **286** |
 
 ---
 
 ## 🔗 リンク
 
 - **GitHub**: https://github.com/nahisaho/CodeGraphMCPServer
-- **PyPI**: https://pypi.org/project/codegraph-mcp/
+- **PyPI**: https://pypi.org/project/codegraph-mcp-server/
 - **CHANGELOG**: [CHANGELOG.md](CHANGELOG.md)

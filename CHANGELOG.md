@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-11-27
+
+### Added
+
+#### CLI Enhancement
+- **Rich Progress Display**: Added animated progress bar for `codegraph-mcp index` command
+  - Spinner animation with real-time progress bar
+  - File-by-file processing display
+  - Results table with entity/relation counts and duration
+  - Color-coded status messages
+
+#### Performance Metrics (Measured)
+- Indexing speed: **32 entities/second**
+- File processing: **0.44 seconds/file**
+- Incremental indexing: **< 2 seconds**
+- Query response: **< 2ms**
+
+### Changed
+- Added `rich>=13.0.0` dependency for CLI progress display
+- Updated `Indexer.index_repository()` with optional `progress_callback` parameter
+
+---
+
 ## [0.3.0] - 2025-11-27
 
 ### Added
@@ -171,7 +194,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.4.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.4.0
 [0.3.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.1.0
-[Unreleased]: https://github.com/nahisaho/CodeGraphMCPServer/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nahisaho/CodeGraphMCPServer/compare/v0.4.0...HEAD

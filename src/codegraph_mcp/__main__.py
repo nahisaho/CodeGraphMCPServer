@@ -156,15 +156,95 @@ def cmd_index(args: argparse.Namespace) -> int:
     async def _index() -> int:
         indexer = Indexer()
         incremental = not args.full
-        result = await indexer.index_repository(args.path, incremental=incremental)
-        print(f"Indexed {result.entities_count} entities, "
-              f"{result.relations_count} relations in "
-              f"{result.duration_seconds:.2f}s")
-        if result.errors:
-            print(f"Errors: {len(result.errors)}")
-            for err in result.errors[:5]:
-                print(f"  - {err}")
-        return 0 if result.success else 1
+        
+        # Check if rich is available for progress display
+        try:
+            from rich.console import Console
+            from rich.progress import (
+                Progress,
+                SpinnerColumn,
+                TextColumn,
+                BarColumn,
+                TaskProgressColumn,
+                TimeElapsedColumn,
+            )
+            from rich.live import Live
+            from rich.panel import Panel
+            from rich.table import Table
+            
+            console = Console()
+            
+            # Show start message
+            mode = "Full" if args.full else "Incremental"
+            console.print(f"\n[bold blue]🔍 CodeGraph Indexer[/bold blue]")
+            console.print(f"Repository: [cyan]{args.path}[/cyan]")
+            console.print(f"Mode: [yellow]{mode}[/yellow]\n")
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                TimeElapsedColumn(),
+                console=console,
+            ) as progress:
+                # Add task for indexing
+                task = progress.add_task(
+                    "[cyan]Indexing files...",
+                    total=None,  # Indeterminate at first
+                )
+                
+                # Run indexer with progress callback
+                result = await indexer.index_repository(
+                    args.path,
+                    incremental=incremental,
+                    progress_callback=lambda current, total, file: (
+                        progress.update(
+                            task,
+                            total=total,
+                            completed=current,
+                            description=f"[cyan]Processing: {file.name if file else '...'}",
+                        )
+                    ),
+                )
+                
+                # Complete the task
+                progress.update(task, completed=result.files_indexed, description="[green]Complete!")
+            
+            # Show results in a nice table
+            console.print()
+            table = Table(title="📊 Indexing Results", show_header=False)
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="green")
+            
+            table.add_row("Entities", str(result.entities_count))
+            table.add_row("Relations", str(result.relations_count))
+            table.add_row("Files Indexed", str(result.files_indexed))
+            table.add_row("Files Skipped", str(result.files_skipped))
+            table.add_row("Duration", f"{result.duration_seconds:.2f}s")
+            
+            console.print(table)
+            
+            if result.errors:
+                console.print(f"\n[red]⚠ Errors: {len(result.errors)}[/red]")
+                for err in result.errors[:5]:
+                    console.print(f"  [dim]- {err}[/dim]")
+            else:
+                console.print("\n[green]✅ Indexing completed successfully![/green]\n")
+            
+            return 0 if result.success else 1
+            
+        except ImportError:
+            # Fallback to simple output without rich
+            result = await indexer.index_repository(args.path, incremental=incremental)
+            print(f"Indexed {result.entities_count} entities, "
+                  f"{result.relations_count} relations in "
+                  f"{result.duration_seconds:.2f}s")
+            if result.errors:
+                print(f"Errors: {len(result.errors)}")
+                for err in result.errors[:5]:
+                    print(f"  - {err}")
+            return 0 if result.success else 1
 
     return asyncio.run(_index())
 
