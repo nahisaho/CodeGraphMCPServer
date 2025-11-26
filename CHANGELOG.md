@@ -165,8 +165,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Swift language support
-- Kotlin language support
 - Performance optimizations for 100k+ line repositories
 - MkDocs documentation site
 - GitHub Actions CI/CD pipeline
