@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-11-27
+
+### Added
+
+#### Language Support
+- **Go Language Support**: Full AST parsing for Go source files
+  - Function and method extraction with receiver types
+  - Struct and interface extraction
+  - Package and import handling
+  - Call relation detection
+
+- **Java Language Support**: Comprehensive Java parsing
+  - Class, interface, and enum extraction
+  - Method and constructor extraction
+  - Inheritance (extends/implements) relation detection
+  - Import statement handling
+
+### Changed
+- Updated dependencies to include `tree-sitter-go` and `tree-sitter-java`
+- Extended language registry with Go and Java extractors
+
+### Testing
+- Added 30 new tests for Go and Java parsers
+- Total tests: 212 (from 182 in v0.1.0)
+
+---
+
 ## [0.1.0] - 2025-11-26
 
 ### Added
@@ -89,13 +116,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Go language support
-- Java language support
+- C# language support
+- PHP language support
 - Performance optimizations for 100k+ line repositories
 - MkDocs documentation site
 - GitHub Actions CI/CD pipeline
 
 ---
 
+[0.2.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.1.0
-[Unreleased]: https://github.com/nahisaho/CodeGraphMCPServer/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/nahisaho/CodeGraphMCPServer/compare/v0.2.0...HEAD

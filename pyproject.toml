@@ -1,6 +1,6 @@
 [project]
 name = "codegraph-mcp-server"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.11"
 description = "MCP Server for code graph analysis with GraphRAG capabilities"
 authors = [
@@ -29,6 +29,8 @@ dependencies = [
     "tree-sitter-javascript>=0.21.0",
     "tree-sitter-typescript>=0.21.0",
     "tree-sitter-rust>=0.21.0",
+    "tree-sitter-go>=0.21.0",
+    "tree-sitter-java>=0.21.0",
     
     # Database & Storage (ADR-002)
     "aiosqlite>=0.19.0",
