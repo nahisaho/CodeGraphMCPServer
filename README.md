@@ -5,7 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-1.0-green.svg)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-212%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-286%20passed-brightgreen.svg)]()
 
 ## 概要
 
@@ -29,7 +29,7 @@ CodeGraphMCPServer は、コードベースの構造を理解し、GraphRAG（Gr
 | 📚 **4 MCP Resources** | エンティティ、ファイル、コミュニティ、統計情報 |
 | 💬 **6 MCP Prompts** | コードレビュー、機能実装、デバッグ支援 |
 | ⚡ **高速インデックス** | 10万行を30秒以内、増分更新は2秒以内 |
-| 🌐 **多言語対応** | Python, TypeScript, JavaScript, Rust, Go, Java をサポート |
+| 🌐 **多言語対応** | Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C++, HCL, Ruby をサポート |
 
 ## 動作要件
 
@@ -302,10 +302,18 @@ src/codegraph_mcp/
 │   ├── tools.py         # 14 MCP Tools
 │   ├── resources.py     # 4 MCP Resources
 │   └── prompts.py       # 6 MCP Prompts
-└── languages/           # 言語サポート
+└── languages/           # 言語サポート (11言語)
     ├── python.py        # Python エクストラクター
     ├── typescript.py    # TypeScript エクストラクター
-    └── rust.py          # Rust エクストラクター
+    ├── javascript.py    # JavaScript エクストラクター
+    ├── rust.py          # Rust エクストラクター
+    ├── go.py            # Go エクストラクター
+    ├── java.py          # Java エクストラクター
+    ├── php.py           # PHP エクストラクター
+    ├── csharp.py        # C# エクストラクター
+    ├── cpp.py           # C++ エクストラクター
+    ├── hcl.py           # HCL (Terraform) エクストラクター
+    └── ruby.py          # Ruby エクストラクター
 ```
 
 ## パフォーマンス目標
