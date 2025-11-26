@@ -342,7 +342,6 @@ def cmd_index(args: argparse.Namespace) -> int:
             from rich.console import Console
             from rich.progress import (
                 Progress,
-                SpinnerColumn,
                 TextColumn,
                 BarColumn,
                 TaskProgressColumn,
@@ -350,16 +349,16 @@ def cmd_index(args: argparse.Namespace) -> int:
             )
             from rich.table import Table
             
-            console = Console()
+            # Force UTF-8 safe output
+            console = Console(force_terminal=True, legacy_windows=True)
             
             # Show start message
             mode = "Full" if args.full else "Incremental"
-            console.print("\n[bold blue]\ud83d\udd0d CodeGraph Indexer[/bold blue]")
+            console.print("\n[bold blue]CodeGraph Indexer[/bold blue]")
             console.print(f"Repository: [cyan]{args.path}[/cyan]")
             console.print(f"Mode: [yellow]{mode}[/yellow]\n")
             
             with Progress(
-                SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
@@ -398,7 +397,7 @@ def cmd_index(args: argparse.Namespace) -> int:
             
             # Show results in a nice table
             console.print()
-            table = Table(title="📊 Indexing Results", show_header=False)
+            table = Table(title="Indexing Results", show_header=False)
             table.add_column("Metric", style="cyan")
             table.add_column("Value", style="green")
             
@@ -411,11 +410,12 @@ def cmd_index(args: argparse.Namespace) -> int:
             console.print(table)
             
             if result.errors:
-                console.print(f"\n[red]\u26a0 Errors: {len(result.errors)}[/red]")
+                err_msg = f"\n[red]Errors: {len(result.errors)}[/red]"
+                console.print(err_msg)
                 for err in result.errors[:5]:
                     console.print(f"  [dim]- {err}[/dim]")
             else:
-                msg = "\n[green]\u2705 Indexing completed successfully![/green]\n"
+                msg = "\n[green]Indexing completed successfully![/green]\n"
                 console.print(msg)
             
             return 0 if result.success else 1

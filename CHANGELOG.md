@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2025-11-27
+
+### Fixed
+
+#### SSE Transport
+- Fixed SSE endpoint configuration using `Mount` instead of `Route` for `/messages/`
+- Added proper `Response()` return to avoid NoneType errors on client disconnect
+- Follows official MCP SSE implementation pattern
+
+#### CLI Unicode Compatibility
+- Removed Unicode emoji characters that caused encoding errors on some terminals
+- Removed `SpinnerColumn` to avoid surrogate encoding issues
+- Added `legacy_windows=True` to Rich console for broader compatibility
+
+### Tested
+- Successfully indexed Rust compiler repository (230K+ entities, 34K+ files)
+- Verified all 14 MCP tools working via SSE transport
+
+---
+
 ## [0.6.0] - 2025-11-27
 
 ### Added

@@ -76,12 +76,13 @@ async def run_server_async(
         # SSE transport implementation (REQ-TRP-003)
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
-        from starlette.routing import Route
+        from starlette.responses import Response
+        from starlette.routing import Mount, Route
         import uvicorn
         
-        sse = SseServerTransport("/messages")
+        sse = SseServerTransport("/messages/")
         
-        async def handle_sse(request: Any) -> Any:
+        async def handle_sse(request: Any) -> Response:
             async with sse.connect_sse(
                 request.scope, request.receive, request._send
             ) as streams:
@@ -90,11 +91,12 @@ async def run_server_async(
                     streams[1],
                     server.create_initialization_options(),
                 )
+            return Response()
         
         app = Starlette(
             routes=[
                 Route("/sse", endpoint=handle_sse),
-                Route("/messages", endpoint=sse.handle_post_message, methods=["POST"]),
+                Mount("/messages/", app=sse.handle_post_message),
             ]
         )
         
