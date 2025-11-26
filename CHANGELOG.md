@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-11-27
+
+### Added
+
+#### Language Support - 5 New Languages
+- **PHP Language Support**: Full AST parsing for PHP source files
+  - Class, interface, and trait extraction
+  - Method and function extraction
+  - Namespace handling
+  - Inheritance and implements relation detection
+
+- **C# Language Support**: Comprehensive C# parsing
+  - Class, struct, interface, and enum extraction
+  - Method, constructor, and property extraction
+  - Namespace handling
+  - Inheritance relation detection
+  - Using directive handling
+
+- **C++ Language Support**: Full C++ parsing
+  - Class and struct extraction
+  - Function and method extraction (including header declarations)
+  - Namespace handling
+  - Include directive handling
+  - Inheritance relation detection
+  - Template class support
+
+- **HCL (Terraform) Language Support**: Infrastructure as Code parsing
+  - Resource and data source extraction
+  - Variable and output extraction
+  - Module and locals block extraction
+  - Provider block extraction
+
+- **Ruby Language Support**: Full Ruby parsing
+  - Class and module extraction
+  - Method and singleton method extraction
+  - Inheritance relation detection
+  - require/require_relative handling
+  - Module include/extend detection
+
+### Changed
+- Updated dependencies to include `tree-sitter-php`, `tree-sitter-c-sharp`, `tree-sitter-cpp`, `tree-sitter-hcl`, `tree-sitter-ruby`
+- Extended language registry with 5 new extractors
+
+### Testing
+- Added 73 new tests for PHP, C#, C++, HCL, and Ruby parsers
+- Total tests: 286 (from 212 in v0.2.0)
+
+---
+
 ## [0.2.0] - 2025-11-27
 
 ### Added
@@ -116,14 +165,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- C# language support
-- PHP language support
+- Swift language support
+- Kotlin language support
 - Performance optimizations for 100k+ line repositories
 - MkDocs documentation site
 - GitHub Actions CI/CD pipeline
 
 ---
 
+[0.3.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nahisaho/CodeGraphMCPServer/releases/tag/v0.1.0
-[Unreleased]: https://github.com/nahisaho/CodeGraphMCPServer/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nahisaho/CodeGraphMCPServer/compare/v0.3.0...HEAD
