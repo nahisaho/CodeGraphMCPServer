@@ -26,17 +26,64 @@ AIコーディングアシスタント（GitHub Copilot、Claude Desktop、Curso
 
 ## 2.1 AIコーディングアシスタントの限界
 
-現在のAIコーディングアシスタントには以下の課題があります。
+GitHub Copilot、Claude、Cursorなど、AIコーディングアシスタントは開発効率を大幅に向上させました。しかし、大規模コードベースを扱う際には以下の課題があります。
 
-| 課題 | 詳細 |
-|------|------|
-| ファイル単位の理解 | モジュール間の依存関係を認識できない |
-| 呼び出し追跡の困難 | 関数の呼び出し元・呼び出し先を把握しにくい |
-| 全体像の欠如 | アーキテクチャパターンを認識できない |
+### 課題1: ファイル単位の理解に留まる
+
+AIアシスタントは現在開いているファイルや直接参照されるファイルは理解できますが、プロジェクト全体のモジュール間依存関係を把握することは困難です。
+
+```
+例: UserService を修正したい場合
+├── UserService.py      ← AIはこのファイルを理解
+├── AuthController.py   ← UserServiceを呼び出しているが、AIは認識しにくい
+├── UserRepository.py   ← UserServiceが依存しているが、関係性が不明
+└── tests/test_user.py  ← テストファイルの存在を見落としやすい
+```
+
+### 課題2: 呼び出し追跡の困難
+
+「この関数を変更したら、どこに影響するか？」という質問に正確に答えることが難しい状況です。
+
+- **呼び出し元（Callers）**: どのコードがこの関数を呼んでいるか
+- **呼び出し先（Callees）**: この関数がどのコードを呼んでいるか
+- **間接的な依存**: 2段階以上離れた依存関係
+
+### 課題3: アーキテクチャパターンの認識不足
+
+プロジェクト全体がどのような設計思想で作られているかを理解することが困難です。
+
+| 理解できないこと | 影響 |
+|------------------|------|
+| レイヤー構造 | 適切なレイヤーにコードを配置できない |
+| 命名規則 | 既存コードと一貫性のない命名になる |
+| 共通パターン | 車輪の再発明をしてしまう |
+| モジュール境界 | 責務の分離が曖昧になる |
 
 ## 2.2 既存ソリューションの課題
 
-code-graph-ragなどの既存ソリューションは外部データベース（Memgraph等）の設定が必要で、導入障壁が高いという課題がありました。
+### code-graph-ragの制約
+
+[code-graph-rag](https://github.com/vitali87/code-graph-rag)は優れたコードグラフ分析ツールですが、以下の導入障壁があります。
+
+| 観点 | code-graph-rag | CodeGraph MCP Server |
+|------|----------------|----------------------|
+| グラフDB | Memgraph（外部依存） | SQLite（組み込み） |
+| デプロイ | Docker必須 | `pip install`のみ |
+| 起動時間 | 重い（DB起動含む） | 軽量（秒単位） |
+| MCP統合 | 後付け対応 | ネイティブ設計 |
+| GraphRAG | なし | コミュニティ要約対応 |
+
+### 導入の複雑さ
+
+従来のソリューションでは以下の手順が必要でした：
+
+1. Dockerのインストール
+2. Memgraphコンテナの起動
+3. 接続設定の構成
+4. データのインポート
+5. クエリインターフェースの設定
+
+CodeGraph MCP Serverはこれらをすべて不要にし、**1コマンドで起動可能**にしました。
 
 ---
 
@@ -53,14 +100,23 @@ source .venv/bin/activate  # Linux/macOS
 # インストール
 pip install codegraph-mcp-server
 
-# インデックス作成
+# インデックス作成（初回はフルインデックス）
 codegraph-mcp index /path/to/your/project --full
 
-# サーバー起動
-codegraph-mcp serve --repo /path/to/your/project
+# サーバー起動（バックグラウンド）
+codegraph-mcp start --repo /path/to/your/project
+
+# サーバー状態確認
+codegraph-mcp status
+
+# サーバー停止
+codegraph-mcp stop
+
+# ソースコード変更後は増分インデックスで更新
+codegraph-mcp index /path/to/your/project
 ```
 
-外部データベース不要。SQLiteによる組み込みグラフエンジンで動作します。
+外部データベース不要。SQLiteによる組み込みグラフエンジンで動作します。増分インデックスはGit差分を活用し、変更ファイルのみを再インデックスするため高速です。
 
 ## 3.2 アーキテクチャ
 
@@ -206,6 +262,16 @@ Indexed 16 entities, 37 relations in 0.81s
 ### ステップ3: MCPサーバー起動
 
 ```bash
+# バックグラウンドで起動
+codegraph-mcp start --repo /path/to/your/project
+
+# 状態確認
+codegraph-mcp status
+
+# 停止
+codegraph-mcp stop
+
+# フォアグラウンドで起動（デバッグ用）
 codegraph-mcp serve --repo /path/to/your/project
 ```
 

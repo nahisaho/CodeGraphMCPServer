@@ -2,27 +2,45 @@
 CLI Entry Point for CodeGraph MCP Server
 
 Usage:
-    codegraph-mcp serve --repo /path/to/project
-    codegraph-mcp index /path/to/project
-    codegraph-mcp query "find all functions that call authenticate"
-    codegraph-mcp stats /path/to/project
+    codegraph-mcp start --repo /path/to/project    # Start server in background
+    codegraph-mcp stop                              # Stop background server
+    codegraph-mcp status                            # Check server status
+    codegraph-mcp serve --repo /path/to/project    # Start server in foreground
+    codegraph-mcp index /path/to/project           # Index repository
+    codegraph-mcp query "find all functions"       # Execute query
+    codegraph-mcp stats /path/to/project           # Show statistics
     codegraph-mcp --help
 
 Requirements: REQ-CLI-001 ~ REQ-CLI-004
 """
 
 import argparse
+import os
+import signal
+import subprocess
 import sys
 from pathlib import Path
 
 from codegraph_mcp import __version__
 
 
+# Default PID file location
+def get_pid_file() -> Path:
+    """Get the PID file path."""
+    return Path.home() / ".codegraph" / "server.pid"
+
+
+def get_log_file() -> Path:
+    """Get the log file path."""
+    return Path.home() / ".codegraph" / "server.log"
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="codegraph-mcp",
-        description="CodeGraph MCP Server - Code graph analysis with GraphRAG capabilities",
+        description="CodeGraph MCP Server - "
+                    "Code graph analysis with GraphRAG",
     )
     parser.add_argument(
         "--version",
@@ -30,10 +48,46 @@ def create_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {__version__}",
     )
 
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    subparsers = parser.add_subparsers(
+        dest="command",
+        help="Available commands",
+    )
 
-    # serve command (REQ-CLI-001)
-    serve_parser = subparsers.add_parser("serve", help="Start MCP server")
+    # start command - Start server in background
+    start_parser = subparsers.add_parser(
+        "start",
+        help="Start MCP server in background",
+    )
+    start_parser.add_argument(
+        "--repo",
+        type=Path,
+        default=Path.cwd(),
+        help="Repository path to serve (default: current directory)",
+    )
+    start_parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default="sse",
+        help="Transport protocol (default: sse for background)",
+    )
+    start_parser.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Port for SSE transport (default: 8080)",
+    )
+
+    # stop command - Stop background server
+    subparsers.add_parser("stop", help="Stop background MCP server")
+
+    # status command - Check server status
+    subparsers.add_parser("status", help="Check MCP server status")
+
+    # serve command (REQ-CLI-001) - Foreground mode
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Start MCP server in foreground",
+    )
     serve_parser.add_argument(
         "--repo",
         type=Path,
@@ -93,7 +147,10 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     # stats command (REQ-RSC-004)
-    stats_parser = subparsers.add_parser("stats", help="Show repository statistics")
+    stats_parser = subparsers.add_parser(
+        "stats",
+        help="Show repository statistics",
+    )
     stats_parser.add_argument(
         "path",
         type=Path,
@@ -136,6 +193,129 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def cmd_start(args: argparse.Namespace) -> int:
+    """Handle start command - Start server in background."""
+    pid_file = get_pid_file()
+    log_file = get_log_file()
+    
+    # Ensure directory exists
+    pid_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Check if already running
+    if pid_file.exists():
+        try:
+            pid = int(pid_file.read_text().strip())
+            os.kill(pid, 0)  # Check if process exists
+            print(f"Server is already running (PID: {pid})")
+            return 1
+        except (ProcessLookupError, ValueError):
+            # Process not running, remove stale PID file
+            pid_file.unlink()
+    
+    # Build command
+    cmd = [
+        sys.executable, "-m", "codegraph_mcp",
+        "serve",
+        "--repo", str(args.repo.resolve()),
+        "--transport", args.transport,
+        "--port", str(args.port),
+    ]
+    
+    # Start server in background
+    with open(log_file, "w") as log:
+        process = subprocess.Popen(
+            cmd,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    
+    # Write PID file
+    pid_file.write_text(str(process.pid))
+    
+    print("\u2705 Server started in background")
+    print(f"   PID: {process.pid}")
+    print(f"   Repository: {args.repo.resolve()}")
+    print(f"   Transport: {args.transport}")
+    if args.transport == "sse":
+        print(f"   URL: http://localhost:{args.port}")
+    print(f"   Log: {log_file}")
+    print("\nUse 'codegraph-mcp stop' to stop the server")
+    
+    return 0
+
+
+def cmd_stop(args: argparse.Namespace) -> int:
+    """Handle stop command - Stop background server."""
+    pid_file = get_pid_file()
+    
+    if not pid_file.exists():
+        print("No server is running")
+        return 1
+    
+    try:
+        pid = int(pid_file.read_text().strip())
+        os.kill(pid, signal.SIGTERM)
+        
+        # Wait for process to terminate
+        import time
+        for _ in range(10):
+            try:
+                os.kill(pid, 0)
+                time.sleep(0.5)
+            except ProcessLookupError:
+                break
+        
+        pid_file.unlink()
+        print(f"✅ Server stopped (PID: {pid})")
+        return 0
+        
+    except ProcessLookupError:
+        pid_file.unlink()
+        print("Server was not running (stale PID file removed)")
+        return 0
+    except ValueError:
+        print("Invalid PID file")
+        pid_file.unlink()
+        return 1
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    """Handle status command - Check server status."""
+    pid_file = get_pid_file()
+    log_file = get_log_file()
+    
+    if not pid_file.exists():
+        print("❌ Server is not running")
+        return 1
+    
+    try:
+        pid = int(pid_file.read_text().strip())
+        os.kill(pid, 0)  # Check if process exists
+        
+        print("\u2705 Server is running")
+        print(f"   PID: {pid}")
+        print(f"   Log: {log_file}")
+        
+        # Show last few log lines if available
+        if log_file.exists():
+            lines = log_file.read_text().strip().split("\n")
+            if lines and lines[0]:
+                print("\nRecent logs:")
+                for line in lines[-5:]:
+                    print(f"   {line}")
+        
+        return 0
+        
+    except ProcessLookupError:
+        pid_file.unlink()
+        print("❌ Server is not running (stale PID file removed)")
+        return 1
+    except ValueError:
+        print("❌ Invalid PID file")
+        return 1
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     """Handle serve command."""
     from codegraph_mcp.server import run_server
@@ -168,15 +348,13 @@ def cmd_index(args: argparse.Namespace) -> int:
                 TaskProgressColumn,
                 TimeElapsedColumn,
             )
-            from rich.live import Live
-            from rich.panel import Panel
             from rich.table import Table
             
             console = Console()
             
             # Show start message
             mode = "Full" if args.full else "Incremental"
-            console.print(f"\n[bold blue]🔍 CodeGraph Indexer[/bold blue]")
+            console.print("\n[bold blue]\ud83d\udd0d CodeGraph Indexer[/bold blue]")
             console.print(f"Repository: [cyan]{args.path}[/cyan]")
             console.print(f"Mode: [yellow]{mode}[/yellow]\n")
             
@@ -203,13 +381,20 @@ def cmd_index(args: argparse.Namespace) -> int:
                             task,
                             total=total,
                             completed=current,
-                            description=f"[cyan]Processing: {file.name if file else '...'}",
+                            description=(
+                                f"[cyan]Processing: "
+                                f"{file.name if file else '...'}"
+                            ),
                         )
                     ),
                 )
                 
                 # Complete the task
-                progress.update(task, completed=result.files_indexed, description="[green]Complete!")
+                progress.update(
+                    task,
+                    completed=result.files_indexed,
+                    description="[green]Complete!",
+                )
             
             # Show results in a nice table
             console.print()
@@ -226,17 +411,21 @@ def cmd_index(args: argparse.Namespace) -> int:
             console.print(table)
             
             if result.errors:
-                console.print(f"\n[red]⚠ Errors: {len(result.errors)}[/red]")
+                console.print(f"\n[red]\u26a0 Errors: {len(result.errors)}[/red]")
                 for err in result.errors[:5]:
                     console.print(f"  [dim]- {err}[/dim]")
             else:
-                console.print("\n[green]✅ Indexing completed successfully![/green]\n")
+                msg = "\n[green]\u2705 Indexing completed successfully![/green]\n"
+                console.print(msg)
             
             return 0 if result.success else 1
             
         except ImportError:
             # Fallback to simple output without rich
-            result = await indexer.index_repository(args.path, incremental=incremental)
+            result = await indexer.index_repository(
+                args.path,
+                incremental=incremental,
+            )
             print(f"Indexed {result.entities_count} entities, "
                   f"{result.relations_count} relations in "
                   f"{result.duration_seconds:.2f}s")
@@ -364,6 +553,9 @@ def main() -> int:
         return 0
 
     commands = {
+        "start": cmd_start,
+        "stop": cmd_stop,
+        "status": cmd_status,
         "serve": cmd_serve,
         "index": cmd_index,
         "query": cmd_query,

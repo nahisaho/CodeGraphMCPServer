@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-11-27
+
+### Added
+
+#### Background Server Management
+- **`codegraph-mcp start`**: Start MCP server in background (daemon mode)
+  - Default SSE transport on port 8080
+  - PID file stored at `~/.codegraph/server.pid`
+  - Logs written to `~/.codegraph/server.log`
+- **`codegraph-mcp stop`**: Stop background MCP server gracefully
+- **`codegraph-mcp status`**: Check server status with recent log output
+
+### Changed
+- `codegraph-mcp serve` now explicitly documented as foreground mode
+- Background mode uses SSE transport by default (stdio for foreground)
+
+---
+
 ## [0.5.0] - 2025-11-27
 
 ### Changed

@@ -1,9 +1,9 @@
 # Technology Stack
 
 **Project**: CodeGraph MCP Server
-**Last Updated**: 2025-11-26
-**Version**: 2.0
-**Synced With**: design-adr.md (ADR-001〜010)
+**Last Updated**: 2025-11-27
+**Version**: 2.1
+**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.5.0)
 
 ---
 
@@ -44,10 +44,17 @@
 | ライブラリ | バージョン | 用途 | 要件ID | ADR |
 |-----------|-----------|------|--------|-----|
 | tree-sitter | >=0.21.0 | AST解析基盤 | REQ-AST-001~005 | ADR-003 |
-| tree-sitter-python | >=0.21.0 | Python解析 | REQ-AST-001 |
-| tree-sitter-javascript | >=0.21.0 | JavaScript解析 | Phase 2 |
-| tree-sitter-typescript | >=0.21.0 | TypeScript解析 | REQ-AST-002 |
-| tree-sitter-rust | >=0.21.0 | Rust解析 | REQ-AST-003 |
+| tree-sitter-python | >=0.21.0 | Python解析 | REQ-AST-001 | |
+| tree-sitter-javascript | >=0.21.0 | JavaScript解析 | ✅ | |
+| tree-sitter-typescript | >=0.21.0 | TypeScript解析 | REQ-AST-002 | |
+| tree-sitter-rust | >=0.21.0 | Rust解析 | REQ-AST-003 | |
+| tree-sitter-go | >=0.21.0 | Go解析 | ✅ v0.2.0 | |
+| tree-sitter-java | >=0.21.0 | Java解析 | ✅ v0.2.0 | |
+| tree-sitter-php | >=0.21.0 | PHP解析 | ✅ v0.3.0 | |
+| tree-sitter-c-sharp | >=0.21.0 | C#解析 | ✅ v0.3.0 | |
+| tree-sitter-cpp | >=0.21.0 | C++解析 | ✅ v0.3.0 | |
+| tree-sitter-hcl | >=0.21.0 | HCL (Terraform)解析 | ✅ v0.3.0 | |
+| tree-sitter-ruby | >=0.21.0 | Ruby解析 | ✅ v0.3.0 | |
 
 ### Database & Storage (ADR-002)
 
@@ -270,14 +277,15 @@ known-first-party = ["codegraph_mcp"]
 
 ## Performance Requirements
 
-| 指標 | 目標値 | 要件ID |
-|------|--------|--------|
-| 初回インデックス (10万行) | < 30秒 | REQ-NFR-001 |
-| 増分インデックス | < 2秒 | REQ-NFR-002 |
-| クエリレスポンス | < 500ms | REQ-NFR-003 |
-| 起動時間 | < 2秒 | REQ-NFR-004 |
-| メモリ使用量 | < 500MB | REQ-NFR-005 |
-| ディスク使用量 | < 100MB/10万行 | REQ-NFR-006 |
+| 指標 | 目標値 | 実測値 (v0.5.0) | 要件ID |
+|------|--------|-----------------|--------|
+| 初回インデックス (10万行) | < 30秒 | **0.63秒** (67 files, 942 entities) | REQ-NFR-001 |
+| 増分インデックス | < 2秒 | < 0.5秒 | REQ-NFR-002 |
+| クエリレスポンス | < 500ms | < 2ms | REQ-NFR-003 |
+| 起動時間 | < 2秒 | < 1秒 | REQ-NFR-004 |
+| メモリ使用量 | < 500MB | ~200MB | REQ-NFR-005 |
+| ディスク使用量 | < 100MB/10万行 | ~5MB | REQ-NFR-006 |
+| エンティティ/秒 | - | **1,495** (47x improved in v0.5.0) | - |
 
 ---
 
@@ -357,6 +365,13 @@ class MyParser:
 
 ## Changelog
 
+### Version 2.2 (2025-11-27)
+
+- v0.5.0リリースに伴う更新
+- 11言語サポート（PHP, C#, C++, HCL, Ruby追加）
+- パフォーマンス実測値追加（47x改善）
+- バッチDB書き込みによる最適化
+
 ### Version 2.1 (2025-11-26)
 
 - Phase 3実装完了に伴う更新
@@ -383,5 +398,5 @@ class MyParser:
 
 ---
 
-**Last Updated**: 2025-11-26
+**Last Updated**: 2025-11-27
 **Maintained By**: MUSUBI SDD

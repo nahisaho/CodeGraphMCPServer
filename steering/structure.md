@@ -1,9 +1,9 @@
 # Project Structure
 
 **Project**: CodeGraph MCP Server
-**Last Updated**: 2025-11-26
-**Version**: 2.0
-**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md
+**Last Updated**: 2025-11-27
+**Version**: 2.1
+**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.5.0)
 
 ---
 
@@ -456,7 +456,7 @@ This structure enforces:
 | `core/llm.py` | ~350 | ✅ Complete | マルチプロバイダーLLM統合 |
 | `core/graphrag.py` | ~300 | ✅ Complete | GraphRAG検索 |
 
-### Language Modules ✅
+### Language Modules ✅ (11 Languages in v0.3.0+)
 
 | File | Lines | Status | Description |
 |------|-------|--------|-------------|
@@ -464,6 +464,13 @@ This structure enforces:
 | `languages/typescript.py` | ~250 | ✅ Complete | TypeScript ASTエクストラクター |
 | `languages/javascript.py` | ~100 | ✅ Complete | JavaScript ASTエクストラクター |
 | `languages/rust.py` | ~300 | ✅ Complete | Rust ASTエクストラクター |
+| `languages/go.py` | ~250 | ✅ v0.2.0 | Go ASTエクストラクター |
+| `languages/java.py` | ~280 | ✅ v0.2.0 | Java ASTエクストラクター |
+| `languages/php.py` | ~250 | ✅ v0.3.0 | PHP ASTエクストラクター |
+| `languages/csharp.py` | ~280 | ✅ v0.3.0 | C# ASTエクストラクター |
+| `languages/cpp.py` | ~300 | ✅ v0.3.0 | C++ ASTエクストラクター |
+| `languages/hcl.py` | ~200 | ✅ v0.3.0 | HCL (Terraform) ASTエクストラクター |
+| `languages/ruby.py` | ~250 | ✅ v0.3.0 | Ruby ASTエクストラクター |
 
 ### MCP Modules ✅
 
@@ -491,24 +498,43 @@ This structure enforces:
 | `CHANGELOG.md` | ✅ Complete | 変更履歴 |
 | `RELEASE_NOTES.md` | ✅ Complete | リリースノート |
 
-### Test Coverage
+### Test Coverage (v0.5.0)
 
 | Directory | Tests | Status |
 |-----------|-------|--------|
-| `tests/unit/` | 140+ | ✅ All Pass |
-| `tests/integration/` | 43+ | ✅ All Pass |
-| **Total** | **182** | **182 passed, 1 skipped** |
+| `tests/unit/` | 200+ | ✅ All Pass |
+| `tests/integration/` | 50+ | ✅ All Pass |
+| `tests/e2e/` | 10+ | ✅ All Pass |
+| **Total** | **286** | **285 passed, 1 skipped** |
 
-### Release Artifacts
+### Release Artifacts (v0.5.0)
 
 | File | Size | Status |
 |------|------|--------|
-| `codegraph_mcp-0.1.0-py3-none-any.whl` | 70KB | ✅ Built |
-| `codegraph_mcp-0.1.0.tar.gz` | 76KB | ✅ Built |
+| `codegraph_mcp_server-0.5.0-py3-none-any.whl` | ~110KB | ✅ PyPI Published |
+| `codegraph_mcp_server-0.5.0.tar.gz` | ~118KB | ✅ PyPI Published |
+
+### Release History
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| v0.1.0 | 2025-11-26 | Initial: Python, TS, JS, Rust |
+| v0.2.0 | 2025-11-27 | +Go, Java |
+| v0.3.0 | 2025-11-27 | +PHP, C#, C++, HCL, Ruby (11 languages) |
+| v0.4.0 | 2025-11-27 | CLI Progress Display |
+| **v0.5.0** | **2025-11-27** | **47x Performance (Batch DB)** |
 
 ---
 
 ## Changelog
+
+### Version 2.3 (2025-11-27)
+
+- v0.5.0リリースに伴う更新
+- 11言語パーサーモジュール追記
+- テストカウント: 286（285 passed, 1 skipped）
+- パフォーマンス改善: 47x高速化（バッチDB書き込み）
+- Release History追加
 
 ### Version 2.2 (2025-11-26)
 
@@ -544,5 +570,5 @@ This structure enforces:
 
 ---
 
-**Last Updated**: 2025-11-26
+**Last Updated**: 2025-11-27
 **Maintained By**: MUSUBI SDD

@@ -1,9 +1,9 @@
 # Product Context
 
 **Project**: CodeGraph MCP Server
-**Last Updated**: 2025-11-26
-**Version**: 2.2
-**Synced With**: requirements-specification.md, design-*.md
+**Last Updated**: 2025-11-27
+**Version**: 2.3
+**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.5.0)
 
 ---
 
@@ -236,13 +236,14 @@ CodeGraph MCP Serverは以下のアプローチでこれらの問題を解決し
 
 #### Technical Metrics
 
-| Metric | Target | Requirements |
-|--------|--------|--------------|
-| 初回インデックス (10万行) | < 30秒 | REQ-NFR-001 |
-| 増分インデックス | < 2秒 | REQ-NFR-002 |
-| クエリレスポンス | < 500ms | REQ-NFR-003 |
-| 起動時間 | < 2秒 | REQ-NFR-004 |
-| メモリ使用量 | < 500MB | REQ-NFR-005 |
+| Metric | Target | Actual (v0.5.0) | Requirements |
+|--------|--------|-----------------|-------------|
+| 初回インデックス (10万行) | < 30秒 | **0.63秒** (67 files) | REQ-NFR-001 |
+| 増分インデックス | < 2秒 | < 0.5秒 | REQ-NFR-002 |
+| クエリレスポンス | < 500ms | < 2ms | REQ-NFR-003 |
+| 起動時間 | < 2秒 | < 1秒 | REQ-NFR-004 |
+| メモリ使用量 | < 500MB | ~200MB | REQ-NFR-005 |
+| エンティティ/秒 | - | **1,495** (47x improved) | - |
 
 #### Product Metrics (将来)
 
@@ -459,6 +460,14 @@ CodeGraph MCP Serverは以下のアプローチでこれらの問題を解決し
 
 ## Changelog
 
+### Version 2.3 (2025-11-27)
+
+- v0.5.0リリース（47xパフォーマンス改善）
+- バッチDB書き込み実装
+- 11言語サポート: Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C++, HCL, Ruby
+- テスト: 285 passed
+- PyPI: codegraph-mcp-server v0.5.0
+
 ### Version 2.2 (2025-11-26)
 
 - Phase 3 (Polish & Extensions) 完了を反映
@@ -494,5 +503,5 @@ CodeGraph MCP Serverは以下のアプローチでこれらの問題を解決し
 
 ---
 
-**Last Updated**: 2025-11-26
+**Last Updated**: 2025-11-27
 **Maintained By**: MUSUBI SDD
