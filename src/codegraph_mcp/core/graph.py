@@ -298,6 +298,88 @@ class GraphEngine:
         await self._connection.commit()
         return cursor.lastrowid
     
+    async def add_entities_batch(self, entities: list[Entity]) -> int:
+        """
+        Add multiple entities in a single batch operation.
+        
+        This is significantly faster than adding entities one by one
+        because it uses executemany and commits once at the end.
+        
+        Args:
+            entities: List of entities to add.
+            
+        Returns:
+            Number of entities added.
+        """
+        if not entities:
+            return 0
+        
+        data = [
+            (
+                entity.id,
+                entity.type.value,
+                entity.name,
+                entity.qualified_name,
+                str(entity.file_path),
+                entity.start_line,
+                entity.end_line,
+                entity.signature or "",
+                entity.docstring or "",
+                json.dumps(entity.metadata),
+            )
+            for entity in entities
+        ]
+        
+        await self._connection.executemany(
+            """
+            INSERT OR REPLACE INTO entities
+            (id, type, name, qualified_name, file_path,
+             start_line, end_line, signature, docstring, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            data,
+        )
+        await self._connection.commit()
+        return len(entities)
+    
+    async def add_relations_batch(self, relations: list[Relation]) -> int:
+        """
+        Add multiple relations in a single batch operation.
+        
+        This is significantly faster than adding relations one by one
+        because it uses executemany and commits once at the end.
+        
+        Args:
+            relations: List of relations to add.
+            
+        Returns:
+            Number of relations added.
+        """
+        if not relations:
+            return 0
+        
+        data = [
+            (
+                relation.source_id,
+                relation.target_id,
+                relation.type.value,
+                relation.weight,
+                json.dumps(relation.metadata),
+            )
+            for relation in relations
+        ]
+        
+        await self._connection.executemany(
+            """
+            INSERT OR IGNORE INTO relations
+            (source_id, target_id, type, weight, metadata)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            data,
+        )
+        await self._connection.commit()
+        return len(relations)
+    
     async def get_entity(self, entity_id: str) -> Entity | None:
         """Get an entity by ID."""
         cursor = await self._connection.execute(

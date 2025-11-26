@@ -97,6 +97,8 @@ class Indexer:
         Requirements: REQ-IDX-001
         """
         import time
+        from codegraph_mcp.core.parser import Entity, Relation
+        
         start_time = time.time()
         
         result = IndexResult()
@@ -105,6 +107,11 @@ class Indexer:
         # Initialize graph engine
         self._engine = GraphEngine(repo_path)
         await self._engine.initialize()
+        
+        # Batch accumulators
+        all_entities: list[Entity] = []
+        all_relations: list[Relation] = []
+        file_updates: list[tuple[Path, ParseResult]] = []
         
         try:
             # Get files to index
@@ -115,19 +122,33 @@ class Indexer:
             
             total_files = len(files)
             
-            # Index each file
+            # Parse each file and collect results
             for idx, file_path in enumerate(files):
                 # Report progress
                 if progress_callback:
                     progress_callback(idx, total_files, file_path)
                 
                 try:
-                    file_result = await self._index_file(file_path)
-                    result.entities_count += len(file_result.entities)
-                    result.relations_count += len(file_result.relations)
+                    parse_result = self.parser.parse_file(file_path)
+                    
+                    if parse_result.success:
+                        all_entities.extend(parse_result.entities)
+                        all_relations.extend(parse_result.relations)
+                        file_updates.append((file_path, parse_result))
+                        result.entities_count += len(parse_result.entities)
+                        result.relations_count += len(parse_result.relations)
+                    
                     result.files_indexed += 1
                 except Exception as e:
                     result.errors.append(f"{file_path}: {e}")
+            
+            # Batch write all entities and relations
+            if self._engine:
+                await self._engine.add_entities_batch(all_entities)
+                await self._engine.add_relations_batch(all_relations)
+                
+                # Update file tracking in batch
+                await self._update_files_batch(file_updates)
             
             # Final progress update
             if progress_callback:
@@ -140,37 +161,38 @@ class Indexer:
         
         return result
     
-    async def _index_file(self, file_path: Path) -> ParseResult:
-        """
-        Index a single file.
+    async def _update_files_batch(
+        self,
+        file_updates: list[tuple[Path, ParseResult]],
+    ) -> None:
+        """Update file tracking information in batch."""
+        if not self._engine or not self._engine._connection:
+            return
+        if not file_updates:
+            return
         
-        Args:
-            file_path: Path to the file
-            
-        Returns:
-            ParseResult with extracted entities and relations
-        """
-        # Parse the file
-        parse_result = self.parser.parse_file(file_path)
+        data = []
+        for file_path, parse_result in file_updates:
+            content = file_path.read_bytes()
+            file_hash = hashlib.sha256(content).hexdigest()
+            language = self.parser.detect_language(file_path)
+            data.append((
+                str(file_path),
+                language,
+                file_hash,
+                len(content),
+                len(parse_result.entities),
+            ))
         
-        if not parse_result.success:
-            return parse_result
-        
-        if not self._engine:
-            return parse_result
-
-        # Store entities
-        for entity in parse_result.entities:
-            await self._engine.add_entity(entity)
-
-        # Store relations
-        for relation in parse_result.relations:
-            await self._engine.add_relation(relation)
-        
-        # Update file tracking
-        await self._update_file_info(file_path, parse_result)
-        
-        return parse_result
+        await self._engine._connection.executemany(
+            """
+            INSERT OR REPLACE INTO files
+            (path, language, hash, size, entity_count, indexed_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            data,
+        )
+        await self._engine._connection.commit()
     
     async def _get_changed_files(self, repo_path: Path) -> list[Path]:
         """
@@ -230,35 +252,6 @@ class Indexer:
                     files.append(path)
         
         return files
-    
-    async def _update_file_info(
-        self,
-        file_path: Path,
-        parse_result: ParseResult,
-    ) -> None:
-        """Update file tracking information."""
-        if not self._engine or not self._engine._connection:
-            return
-
-        content = file_path.read_bytes()
-        file_hash = hashlib.sha256(content).hexdigest()
-        language = self.parser.detect_language(file_path)
-
-        await self._engine._connection.execute(
-            """
-            INSERT OR REPLACE INTO files
-            (path, language, hash, size, entity_count, indexed_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """,
-            (
-                str(file_path),
-                language,
-                file_hash,
-                len(content),
-                len(parse_result.entities),
-            ),
-        )
-        await self._engine._connection.commit()
     
     @staticmethod
     def compute_file_hash(file_path: Path) -> str:

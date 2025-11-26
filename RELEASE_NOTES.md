@@ -1,53 +1,58 @@
-# Release Notes - v0.4.0
+# Release Notes - v0.5.0
 
 **Release Date**: 2025-11-27
 
-## ⚡ CLI Enhancement Release
+## 🚀 Performance Optimization Release
 
-CodeGraphMCPServer v0.4.0 は、CLIのユーザーエクスペリエンスを大幅に向上させました。
+CodeGraphMCPServer v0.5.0 は、バッチDB書き込みにより **47倍** のインデックス高速化を実現しました。
 
 ---
 
-## ✨ 新機能
+## ⚡ パフォーマンス改善
 
-### 🎨 Rich Progress Display
+### Batch Database Writes
 
-`codegraph-mcp index` コマンドにアニメーション付きプログレス表示を追加：
+従来の1エンティティ/リレーションごとのcommitから、バッチ処理に変更：
+
+| メトリクス | v0.4.0 | v0.5.0 | 改善率 |
+|-----------|--------|--------|--------|
+| インデックス時間 | 29.47s | 0.63s | **47x** |
+| エンティティ/秒 | 32 | 1,495 | **47x** |
+| DB commits | ~5,700 | 3 | **99.9%削減** |
+
+### 実測値 (67ファイル, 942エンティティ, 4,755リレーション)
 
 ```
 🔍 CodeGraph Indexer
 Repository: /path/to/project
 Mode: Full
 
-  Processing: parser.py ━━━━━━━━━━━━━━━━━━━━ 45% 0:00:12
+  Complete! ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
 
    📊 Indexing Results
-┌───────────────┬────────┐
-│ Entities      │ 941    │
-│ Relations     │ 4741   │
-│ Files Indexed │ 67     │
-│ Duration      │ 29.47s │
-└───────────────┴────────┘
+┌───────────────┬───────┐
+│ Entities      │ 942   │
+│ Relations     │ 4755  │
+│ Files Indexed │ 67    │
+│ Duration      │ 0.63s │
+└───────────────┴───────┘
 
 ✅ Indexing completed successfully!
 ```
 
-**機能:**
-- スピナーアニメーション
-- リアルタイムプログレスバー
-- ファイル処理状況表示
-- カラー付き結果テーブル
-
 ---
 
-## ⚡ パフォーマンス実測値
+## 🔧 技術的変更
 
-| メトリクス | 実測値 | 備考 |
-|-----------|--------|------|
-| インデックス速度 | **32 エンティティ/秒** | 67ファイル, 941エンティティ |
-| ファイル処理速度 | **0.44秒/ファイル** | 11言語混在プロジェクト |
-| 増分インデックス | **< 2秒** | 変更ファイルのみ処理 |
-| クエリレスポンス | **< 2ms** | グラフ検索 |
+### GraphEngine
+- `add_entities_batch()`: 複数エンティティを一括挿入
+- `add_relations_batch()`: 複数リレーションを一括挿入
+- SQLite `executemany()` によるバルクインサート
+
+### Indexer
+- パース結果を収集してから一括書き込み
+- ファイル情報も一括更新
+- 不要になった `_index_file()` と `_update_file_info()` を削除
 
 ---
 
@@ -58,7 +63,8 @@ Mode: Full
 | v0.1.0 | 2025-11-26 | Initial: Python, TS, JS, Rust | 182 |
 | v0.2.0 | 2025-11-27 | +Go, Java | 212 |
 | v0.3.0 | 2025-11-27 | +PHP, C#, C++, HCL, Ruby (11言語) | 286 |
-| **v0.4.0** | **2025-11-27** | **CLI Progress Display** | **286** |
+| v0.4.0 | 2025-11-27 | CLI Progress Display | 286 |
+| **v0.5.0** | **2025-11-27** | **47x Performance (Batch DB)** | **285** |
 
 ---
 

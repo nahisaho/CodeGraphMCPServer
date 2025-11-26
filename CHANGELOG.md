@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-11-27
+
+### Changed
+
+#### Performance Optimization - Batch Database Writes
+- **47x faster indexing**: Implemented batch write operations for entities and relations
+  - Before: 29.47s for 67 files (32 entities/sec)
+  - After: 0.63s for 67 files (1495 entities/sec)
+- Reduced database commits from ~5700 per repository to 3
+- Added `add_entities_batch()` and `add_relations_batch()` methods to GraphEngine
+- Updated Indexer to collect all parse results before batch writing
+
+#### Technical Details
+- Uses SQLite `executemany()` for bulk inserts
+- Single commit per batch instead of per-entity/relation
+- Batch file tracking updates
+
+---
+
 ## [0.4.0] - 2025-11-27
 
 ### Added

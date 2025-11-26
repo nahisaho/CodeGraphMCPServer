@@ -1,6 +1,6 @@
 [project]
 name = "codegraph-mcp-server"
-version = "0.4.0"
+version = "0.5.0"
 requires-python = ">=3.11"
 description = "MCP Server for code graph analysis with GraphRAG capabilities"
 authors = [
