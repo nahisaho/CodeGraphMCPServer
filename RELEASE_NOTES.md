@@ -1,144 +1,80 @@
-# Release Notes - v0.1.0
+# Release Notes - v0.3.0
 
-**Release Date**: 2025-11-26
+**Release Date**: 2025-11-27
 
-## 🎉 Initial Release
+## 🌐 Language Expansion Release
 
-CodeGraphMCPServer v0.1.0 は、コードベースの構造を理解し、GraphRAG機能を提供するMCPサーバーの初回リリースです。
-
----
-
-## ✨ 主な機能
-
-### 🌳 マルチ言語AST解析
-
-Tree-sitterを使用した高速・正確なコード解析：
-
-| 言語 | クラス | 関数 | メソッド | インポート | インターフェース |
-|------|--------|------|----------|-----------|-----------------|
-| Python | ✅ | ✅ | ✅ | ✅ | ✅ (Protocol) |
-| TypeScript | ✅ | ✅ | ✅ | ✅ | ✅ |
-| JavaScript | ✅ | ✅ | ✅ | ✅ | - |
-| Rust | ✅ (struct) | ✅ | ✅ (impl) | ✅ | ✅ (trait) |
-
-### 🧠 GraphRAG統合
-
-Microsoft GraphRAGコンセプトに基づくコード理解：
-
-- **コミュニティ検出**: Louvainアルゴリズムによる自動クラスタリング
-- **グローバル検索**: コードベース全体の俯瞰的理解
-- **ローカル検索**: エンティティ近傍のコンテキスト取得
-- **LLM連携**: OpenAI / Anthropic / Ollama / ルールベース
-
-### 🔧 MCP インターフェース
-
-| カテゴリ | 数量 | 主な機能 |
-|---------|------|----------|
-| Tools | 14 | コード検索、依存分析、GraphRAG検索 |
-| Resources | 4 | エンティティ、ファイル、コミュニティ、統計 |
-| Prompts | 6 | コードレビュー、実装ガイド、デバッグ支援 |
-
-### 📡 トランスポート
-
-- **stdio**: 標準MCPクライアント向け（Claude Desktop, VS Code, Cursor）
-- **SSE**: HTTP経由のリモート接続、デバッグ用
+CodeGraphMCPServer v0.3.0 は、5つの新しいプログラミング言語サポートを追加し、合計11言語に対応しました。
 
 ---
 
-## 📦 インストール
+## ✨ 新機能
+
+### 🆕 5つの新言語サポート
+
+| 言語 | 拡張子 | 主な抽出対象 |
+|------|--------|-------------|
+| **PHP** | `.php` | class, interface, trait, function, method, namespace |
+| **C#** | `.cs` | class, struct, interface, enum, method, property |
+| **C++** | `.cpp`, `.hpp`, `.h` | class, struct, function, method, namespace, template |
+| **HCL (Terraform)** | `.tf`, `.hcl` | resource, data, variable, output, module, locals |
+| **Ruby** | `.rb`, `.rake` | class, module, method, singleton_method |
+
+### 📊 言語サポート一覧 (11言語)
+
+| 言語 | クラス | 関数 | メソッド | インポート | インターフェース | その他 |
+|------|--------|------|----------|-----------|-----------------|--------|
+| Python | ✅ | ✅ | ✅ | ✅ | ✅ (Protocol) | デコレータ |
+| TypeScript | ✅ | ✅ | ✅ | ✅ | ✅ | 型エイリアス |
+| JavaScript | ✅ | ✅ | ✅ | ✅ | - | ES6+, JSX |
+| Rust | ✅ (struct) | ✅ | ✅ (impl) | ✅ | ✅ (trait) | enum |
+| Go | ✅ (struct) | ✅ | ✅ | ✅ | ✅ | レシーバ |
+| Java | ✅ | ✅ | ✅ | ✅ | ✅ | enum |
+| **PHP** | ✅ | ✅ | ✅ | ✅ | ✅ | trait |
+| **C#** | ✅ | - | ✅ | ✅ | ✅ | struct, enum |
+| **C++** | ✅ | ✅ | ✅ | ✅ (include) | - | struct, template |
+| **HCL** | - | - | - | - | - | resource, module |
+| **Ruby** | ✅ | ✅ | ✅ | ✅ (require) | - | module, mixin |
+
+---
+
+## 📦 新しい依存パッケージ
 
 ```bash
-pip install codegraph-mcp
+pip install codegraph-mcp  # 全言語サポート含む
 ```
 
-### オプション依存
-
-```bash
-# OpenAI LLM統合
-pip install codegraph-mcp[openai]
-
-# SSEトランスポート
-pip install codegraph-mcp[sse]
-
-# 全機能
-pip install codegraph-mcp[all]
-```
-
----
-
-## 🚀 クイックスタート
-
-```bash
-# リポジトリをインデックス
-codegraph-mcp index /path/to/project --full
-
-# MCPサーバーを起動
-codegraph-mcp serve --repo /path/to/project
-```
-
-### Claude Desktop設定
-
-`~/.config/claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "codegraph": {
-      "command": "codegraph-mcp",
-      "args": ["serve", "--repo", "/path/to/project"]
-    }
-  }
-}
-```
-
----
-
-## ⚡ パフォーマンス
-
-| メトリクス | 実測値 | 目標値 |
-|-----------|--------|--------|
-| インデックス (700エンティティ) | 21秒 | < 30秒 |
-| クエリ応答 | < 2ms | < 500ms |
-| 増分インデックス | < 2秒 | < 2秒 |
+追加されたtree-sitterパッケージ:
+- `tree-sitter-php>=0.23.0`
+- `tree-sitter-c-sharp>=0.23.0`
+- `tree-sitter-cpp>=0.23.0`
+- `tree-sitter-hcl>=0.23.0`
+- `tree-sitter-ruby>=0.23.0`
 
 ---
 
 ## 🧪 テスト
 
 ```
-182 tests passed, 1 skipped
+286 tests passed, 1 skipped
 Coverage: 80%+
+New tests: 73 (PHP: 15, C#: 15, C++: 14, HCL: 13, Ruby: 16)
 ```
 
 ---
 
-## 📚 ドキュメント
+## 📈 バージョン履歴
 
-- [README](README.md) - プロジェクト概要
-- [API リファレンス](docs/api.md) - 詳細API仕様
-- [設定ガイド](docs/configuration.md) - 環境変数・クライアント設定
-- [使用例](docs/examples.md) - CLI・Python・MCP使用例
-- [CHANGELOG](CHANGELOG.md) - 変更履歴
-
----
-
-## 🙏 謝辞
-
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Tree-sitter](https://tree-sitter.github.io/)
-- [NetworkX](https://networkx.org/)
-- [Microsoft GraphRAG](https://github.com/microsoft/graphrag)
-
----
-
-## 📄 ライセンス
-
-MIT License
+| Version | Date | Languages | Tests |
+|---------|------|-----------|-------|
+| v0.1.0 | 2025-11-26 | 4 (Python, TypeScript, JavaScript, Rust) | 182 |
+| v0.2.0 | 2025-11-27 | 6 (+Go, Java) | 212 |
+| **v0.3.0** | **2025-11-27** | **11 (+PHP, C#, C++, HCL, Ruby)** | **286** |
 
 ---
 
 ## 🔗 リンク
 
 - **GitHub**: https://github.com/nahisaho/CodeGraphMCPServer
-- **Issues**: https://github.com/nahisaho/CodeGraphMCPServer/issues
 - **PyPI**: https://pypi.org/project/codegraph-mcp/
+- **CHANGELOG**: [CHANGELOG.md](CHANGELOG.md)
