@@ -1,0 +1,244 @@
+[project]
+name = "codegraph-mcp"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "MCP Server for code graph analysis with GraphRAG capabilities"
+authors = [
+    {name = "nahisaho"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+keywords = ["mcp", "code-analysis", "graphrag", "ast", "tree-sitter"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Compilers",
+]
+
+dependencies = [
+    # MCP SDK (ADR-004)
+    "mcp>=1.0.0",
+    
+    # AST Parsing - Tree-sitter (ADR-003)
+    "tree-sitter>=0.21.0",
+    "tree-sitter-python>=0.21.0",
+    "tree-sitter-javascript>=0.21.0",
+    "tree-sitter-typescript>=0.21.0",
+    "tree-sitter-rust>=0.21.0",
+    
+    # Database & Storage (ADR-002)
+    "aiosqlite>=0.19.0",
+    
+    # Data Validation (ADR-006)
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    
+    # Graph Algorithms (ADR-005)
+    "networkx>=3.0",
+    
+    # Vector Operations
+    "numpy>=1.24.0",
+    
+    # Utilities
+    "tiktoken>=0.5.0",
+    "watchfiles>=0.21.0",
+    "gitpython>=3.1.0",
+    "rich>=13.0.0",
+    "typer>=0.9.0",
+]
+
+[project.optional-dependencies]
+# Local embeddings support
+embeddings = [
+    "sentence-transformers>=2.2.0",
+]
+
+# OpenAI integration for semantic analysis
+openai = [
+    "openai>=1.0.0",
+]
+
+# SSE transport support
+sse = [
+    "starlette>=0.27.0",
+    "uvicorn>=0.23.0",
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+
+# Documentation
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.24.0",
+]
+
+# All optional dependencies
+all = [
+    "codegraph-mcp[embeddings,openai,sse,dev,docs]",
+]
+
+[project.scripts]
+codegraph-mcp = "codegraph_mcp.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/nahisaho/CodeGraphMCPServer"
+Documentation = "https://github.com/nahisaho/CodeGraphMCPServer#readme"
+Repository = "https://github.com/nahisaho/CodeGraphMCPServer.git"
+Issues = "https://github.com/nahisaho/CodeGraphMCPServer/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/codegraph_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+]
+
+# ============================================================
+# Testing Configuration
+# ============================================================
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Slow tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/codegraph_mcp"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+fail_under = 80
+show_missing = true
+
+# ============================================================
+# Linting & Formatting (Ruff)
+# ============================================================
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate (commented-out code)
+    "PL",     # pylint
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "PLR0913", # too many arguments
+    "PLR2004", # magic value comparison
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["codegraph_mcp"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG", "PLR2004"]
+"__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ============================================================
+# Type Checking (MyPy)
+# ============================================================
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+show_column_numbers = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tree_sitter.*",
+    "tree_sitter_python.*",
+    "tree_sitter_javascript.*",
+    "tree_sitter_typescript.*",
+    "tree_sitter_rust.*",
+    "networkx.*",
+    "tiktoken.*",
+    "watchfiles.*",
+    "git.*",
+]
+ignore_missing_imports = true
+
+# ============================================================
+# Pre-commit Hooks
+# ============================================================
+# See .pre-commit-config.yaml for hook configuration

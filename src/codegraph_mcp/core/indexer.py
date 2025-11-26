@@ -1,0 +1,250 @@
+"""
+Indexer Module
+
+Repository indexing with incremental update support.
+
+Requirements: REQ-IDX-001 ~ REQ-IDX-004
+Design Reference: design-core-engine.md §2.4
+"""
+
+import hashlib
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from codegraph_mcp.core.parser import ASTParser, ParseResult
+from codegraph_mcp.core.graph import GraphEngine
+
+
+@dataclass
+class IndexResult:
+    """Result of indexing operation."""
+    
+    entities_count: int = 0
+    relations_count: int = 0
+    files_indexed: int = 0
+    files_skipped: int = 0
+    errors: list[str] = field(default_factory=list)
+    duration_seconds: float = 0.0
+    
+    @property
+    def success(self) -> bool:
+        return len(self.errors) == 0
+
+
+@dataclass
+class FileInfo:
+    """Information about an indexed file."""
+    
+    path: Path
+    language: str | None
+    hash: str
+    size: int
+    indexed_at: datetime
+
+
+class Indexer:
+    """
+    Repository indexer with incremental update support.
+    
+    Requirements: REQ-IDX-001 ~ REQ-IDX-004
+    Design Reference: design-core-engine.md §2.4
+    
+    Usage:
+        indexer = Indexer()
+        result = await indexer.index_repository(Path("/repo"))
+    """
+    
+    def __init__(
+        self,
+        parser: ASTParser | None = None,
+        config: Any = None,
+    ) -> None:
+        """
+        Initialize the indexer.
+        
+        Args:
+            parser: AST parser instance (creates default if not provided)
+            config: Configuration object
+        """
+        self.parser = parser or ASTParser()
+        self.config = config
+        self._engine: GraphEngine | None = None
+    
+    async def index_repository(
+        self,
+        repo_path: Path,
+        incremental: bool = True,
+    ) -> IndexResult:
+        """
+        Index a repository.
+        
+        Args:
+            repo_path: Path to the repository
+            incremental: If True, only index changed files
+            
+        Returns:
+            IndexResult with statistics
+            
+        Requirements: REQ-IDX-001
+        """
+        import time
+        start_time = time.time()
+        
+        result = IndexResult()
+        repo_path = repo_path.resolve()
+        
+        # Initialize graph engine
+        self._engine = GraphEngine(repo_path)
+        await self._engine.initialize()
+        
+        try:
+            # Get files to index
+            if incremental:
+                files = await self._get_changed_files(repo_path)
+            else:
+                files = self._get_all_files(repo_path)
+            
+            # Index each file
+            for file_path in files:
+                try:
+                    file_result = await self._index_file(file_path)
+                    result.entities_count += len(file_result.entities)
+                    result.relations_count += len(file_result.relations)
+                    result.files_indexed += 1
+                except Exception as e:
+                    result.errors.append(f"{file_path}: {e}")
+            
+            result.duration_seconds = time.time() - start_time
+            
+        finally:
+            await self._engine.close()
+        
+        return result
+    
+    async def _index_file(self, file_path: Path) -> ParseResult:
+        """
+        Index a single file.
+        
+        Args:
+            file_path: Path to the file
+            
+        Returns:
+            ParseResult with extracted entities and relations
+        """
+        # Parse the file
+        parse_result = self.parser.parse_file(file_path)
+        
+        if not parse_result.success:
+            return parse_result
+        
+        if not self._engine:
+            return parse_result
+
+        # Store entities
+        for entity in parse_result.entities:
+            await self._engine.add_entity(entity)
+
+        # Store relations
+        for relation in parse_result.relations:
+            await self._engine.add_relation(relation)
+        
+        # Update file tracking
+        await self._update_file_info(file_path, parse_result)
+        
+        return parse_result
+    
+    async def _get_changed_files(self, repo_path: Path) -> list[Path]:
+        """
+        Get list of changed files using Git.
+        
+        Requirements: REQ-IDX-002
+        """
+        from codegraph_mcp.utils.git import GitOperations, ChangeType
+        
+        try:
+            git_ops = GitOperations(repo_path)
+            changes = await git_ops.get_changed_files()
+            
+            # Get supported extensions
+            supported_extensions = set(self.parser.LANGUAGE_EXTENSIONS.keys())
+            
+            # Filter to supported file types (excluding deleted files)
+            changed_files = []
+            for change in changes:
+                if change.change_type == ChangeType.DELETED:
+                    # Handle deleted files - remove from graph
+                    await self._handle_deleted_file(repo_path / change.path)
+                    continue
+                    
+                full_path = repo_path / change.path
+                if full_path.suffix.lower() in supported_extensions:
+                    changed_files.append(full_path)
+            
+            return changed_files
+        except ValueError:
+            # Not a git repository - fall back to full scan
+            return self._get_all_files(repo_path)
+    
+    async def _handle_deleted_file(self, file_path: Path) -> None:
+        """Handle a deleted file by removing its entities from the graph."""
+        if self._engine:
+            await self._engine.delete_file_entities(file_path)
+    
+    def _get_all_files(self, repo_path: Path) -> list[Path]:
+        """Get all supported files in repository."""
+        files: list[Path] = []
+        supported_extensions = set(self.parser.LANGUAGE_EXTENSIONS.keys())
+        
+        # Default exclude patterns
+        exclude_dirs = {
+            ".git", "node_modules", "__pycache__", "venv",
+            ".venv", "target", "dist", "build", ".codegraph",
+        }
+        
+        for path in repo_path.rglob("*"):
+            if path.is_file():
+                # Check if in excluded directory
+                if any(ex in path.parts for ex in exclude_dirs):
+                    continue
+                
+                if path.suffix.lower() in supported_extensions:
+                    files.append(path)
+        
+        return files
+    
+    async def _update_file_info(
+        self,
+        file_path: Path,
+        parse_result: ParseResult,
+    ) -> None:
+        """Update file tracking information."""
+        if not self._engine or not self._engine._connection:
+            return
+
+        content = file_path.read_bytes()
+        file_hash = hashlib.sha256(content).hexdigest()
+        language = self.parser.detect_language(file_path)
+
+        await self._engine._connection.execute(
+            """
+            INSERT OR REPLACE INTO files
+            (path, language, hash, size, entity_count, indexed_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (
+                str(file_path),
+                language,
+                file_hash,
+                len(content),
+                len(parse_result.entities),
+            ),
+        )
+        await self._engine._connection.commit()
+    
+    @staticmethod
+    def compute_file_hash(file_path: Path) -> str:
+        """Compute SHA-256 hash of a file."""
+        content = file_path.read_bytes()
+        return hashlib.sha256(content).hexdigest()
