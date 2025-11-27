@@ -13,7 +13,7 @@ AIコーディングアシスタント（GitHub Copilot、Claude Desktop、Curso
 - 11言語対応（Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C++, HCL, Ruby）
 - GraphRAG機能によるコードベース全体の理解
 - 14種のMCPツール、4種のリソース、6種のプロンプト
-- **NEW (v0.6.2)**: 部分一致ID検索、自動コミュニティ検出、スコアリング付きクエリ
+- **NEW (v0.7.0)**: ファイル監視による自動再インデックス、GitHub Actions CI/CD
 
 ## 1.2 対象読者
 
@@ -484,8 +484,8 @@ AI: [global_search ツールを使用]
 ## 6.3 テスト実績
 
 ```
-300 tests passed, 1 skipped
-Coverage: 80%+
+308 tests passed, 1 skipped
+Coverage: 64%
 ```
 
 ---
@@ -513,15 +513,17 @@ Coverage: 80%+
 3. **多言語対応**: 11言語をサポート
 4. **GraphRAG**: コードベース全体の理解を提供
 5. **MCP Native**: 14ツール、4リソース、6プロンプトの包括的実装
-6. **NEW: 部分ID検索**: 関数名だけでエンティティを特定
-7. **NEW: スコアリング**: 関連度の高い結果を優先表示
-8. **NEW: 自動コミュニティ**: インデックス時にコードクラスタを自動検出
+6. **部分ID検索**: 関数名だけでエンティティを特定
+7. **スコアリング**: 関連度の高い結果を優先表示
+8. **自動コミュニティ**: インデックス時にコードクラスタを自動検出
+9. **NEW: ファイル監視**: `watch`コマンドで自動再インデックス
+10. **NEW: CI/CD**: GitHub Actions による自動テスト・リリース
 
 ## 8.2 リンク
 
 - **GitHub**: https://github.com/nahisaho/CodeGraphMCPServer
 - **PyPI**: https://pypi.org/project/codegraph-mcp-server/
-- **バージョン**: v0.6.2 (2025-11-27)
+- **バージョン**: v0.7.0 (2025-11-27)
 
 ## 8.3 今後の展望
 

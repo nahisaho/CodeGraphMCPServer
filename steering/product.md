@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.5
-**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.6.2)
+**Version**: 2.6
+**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.7.0)
 
 ---
 
@@ -460,14 +460,16 @@ CodeGraph MCP Serverは以下のアプローチでこれらの問題を解決し
 
 ## Changelog
 
-### Version 2.4 (2025-11-27)
+### Version 2.6 (2025-11-27)
 
-- v0.6.0-dev 機能追加:
-  - entity_id 部分一致検索（名前、パターンマッチ）
-  - 自動コミュニティ検出（`--community`/`--no-community`オプション）
-  - query_codebase 改善（スコアリング、関連エンティティ、コミュニティ情報）
-  - 増分コミュニティ更新（`update_incremental()`）
-- テスト: 300 passed
+- v0.7.0リリース:
+  - `watch`コマンド: ファイル監視・自動再インデックス
+    - `--debounce`オプション（デフォルト: 1.0秒）
+    - `--community`フラグで再インデックス後にコミュニティ検出
+  - GitHub Actions CI/CD:
+    - CI: Python 3.11/3.12テスト、ruff lint、mypy型チェック、Codecovカバレッジ
+    - Release: タグプッシュで自動PyPIリリース
+- テスト: 308 passed, 1 skipped
 
 ### Version 2.5 (2025-11-27)
 

@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-1.0-green.svg)](https://modelcontextprotocol.io/)
 [![Tests](https://img.shields.io/badge/tests-308%20passed-brightgreen.svg)]()
+[![Coverage](https://img.shields.io/badge/coverage-64%25-yellow.svg)]()
 [![CI](https://github.com/nahisaho/CodeGraphMCPServer/actions/workflows/ci.yml/badge.svg)](https://github.com/nahisaho/CodeGraphMCPServer/actions/workflows/ci.yml)
 
 ## 概要
@@ -66,8 +67,10 @@ codegraph-mcp index /path/to/repository --full
 # 増分インデックス（デフォルト）
 codegraph-mcp index /path/to/repository
 
-# ファイル監視で自動再インデックス
+# ファイル監視で自動再インデックス (v0.7.0 NEW)
 codegraph-mcp watch /path/to/repository
+codegraph-mcp watch /path/to/repository --debounce 2.0  # 2秒のデバウンス
+codegraph-mcp watch /path/to/repository --community     # 再インデックス後にコミュニティ検出
 ```
 
 **出力例:**

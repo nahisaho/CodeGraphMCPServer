@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.4
-**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.6.2)
+**Version**: 2.5
+**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.7.0)
 
 ---
 
@@ -498,21 +498,21 @@ This structure enforces:
 | `CHANGELOG.md` | ✅ Complete | 変更履歴 |
 | `RELEASE_NOTES.md` | ✅ Complete | リリースノート |
 
-### Test Coverage (v0.6.0-dev)
+### Test Coverage (v0.7.0)
 
 | Directory | Tests | Status |
 |-----------|-------|--------|
-| `tests/unit/` | 210+ | ✅ All Pass |
+| `tests/unit/` | 220+ | ✅ All Pass |
 | `tests/integration/` | 50+ | ✅ All Pass |
 | `tests/e2e/` | 10+ | ✅ All Pass |
-| **Total** | **301** | **300 passed, 1 skipped** |
+| **Total** | **309** | **308 passed, 1 skipped** |
 
-### Release Artifacts (v0.6.2)
+### Release Artifacts (v0.7.0)
 
 | File | Size | Status |
 |------|------|--------|
-| `codegraph_mcp_server-0.5.0-py3-none-any.whl` | ~110KB | ✅ PyPI Published |
-| `codegraph_mcp_server-0.5.0.tar.gz` | ~118KB | ✅ PyPI Published |
+| `codegraph_mcp_server-0.7.0-py3-none-any.whl` | ~115KB | ⏳ Pending |
+| `codegraph_mcp_server-0.7.0.tar.gz` | ~120KB | ⏳ Pending |
 
 ### Release History
 
@@ -525,7 +525,8 @@ This structure enforces:
 | v0.5.0 | 2025-11-27 | 47x Performance (Batch DB) |
 | v0.6.0 | 2025-11-27 | Background Server Management |
 | v0.6.1 | 2025-11-27 | SSE/Unicode Fixes |
-| **v0.6.2** | **2025-11-27** | **Partial ID, Auto Community, Large Repo Support** |
+| v0.6.2 | 2025-11-27 | Partial ID, Auto Community, Large Repo Support |
+| **v0.7.0** | **2025-11-27** | **File Watch, GitHub Actions CI/CD** |
 
 ---
 
@@ -533,19 +534,18 @@ This structure enforces:
 
 ### Version 2.5 (2025-11-27)
 
+- v0.7.0リリース:
+  - `watch`コマンド: ファイル監視・自動再インデックス
+  - GitHub Actions CI/CD ワークフロー追加
+- テストカウント: 309（308 passed, 1 skipped）
+
+### Version 2.4 (2025-11-27)
+
 - v0.6.2リリース:
   - 大規模リポジトリ対応（230K+エンティティ）
   - コミュニティ検出最適化（バッチ処理、サンプリング）
   - Rustコンパイラリポジトリで検証済み
 - テストカウント: 301（300 passed, 1 skipped）
-
-### Version 2.4 (2025-11-27)
-
-- v0.6.0-dev機能追加:
-  - entity_id部分一致
-  - 自動コミュニティ検出
-  - query_codebase改善
-- テストカウント: 295（294 passed, 1 skipped）
 
 ### Version 2.3 (2025-11-27)
 
