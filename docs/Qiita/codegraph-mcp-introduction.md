@@ -13,6 +13,7 @@ AIコーディングアシスタント（GitHub Copilot、Claude Desktop、Curso
 - 11言語対応（Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C++, HCL, Ruby）
 - GraphRAG機能によるコードベース全体の理解
 - 14種のMCPツール、4種のリソース、6種のプロンプト
+- **NEW (v0.6.2)**: 部分一致ID検索、自動コミュニティ検出、スコアリング付きクエリ
 
 ## 1.2 対象読者
 
@@ -103,6 +104,9 @@ pip install codegraph-mcp-server
 # インデックス作成（初回はフルインデックス）
 codegraph-mcp index /path/to/your/project --full
 
+# コミュニティ検出をスキップ（大規模リポジトリ向け）
+codegraph-mcp index /path/to/your/project --full --no-community
+
 # サーバー起動（バックグラウンド）
 codegraph-mcp start --repo /path/to/your/project
 
@@ -175,14 +179,20 @@ flowchart TB
 ## 4.1 グラフクエリツール（6種）
 
 ```python
-# 自然言語でコードを検索
-query_codebase(query="認証ロジック", max_results=10)
+# 自然言語でコードを検索（スコアリング付き）
+query_codebase(
+    query="認証ロジック",
+    max_results=10,
+    include_related=True,      # NEW: 関連エンティティも含む
+    entity_types=["function"]  # NEW: タイプでフィルタ
+)
 
-# 依存関係を検索
-find_dependencies(entity_id="UserService", depth=2)
+# 依存関係を検索（部分ID対応）
+find_dependencies(entity_id="UserService", depth=2)  # 名前だけでOK
+find_dependencies(entity_id="service.py::authenticate", depth=2)  # file::name形式
 
-# 呼び出し元を検索
-find_callers(entity_id="authenticate")
+# 呼び出し元を検索（部分ID対応）
+find_callers(entity_id="authenticate")  # 関数名だけで検索可能
 
 # 呼び出し先を検索
 find_callees(entity_id="authenticate")
@@ -375,10 +385,22 @@ AI: [global_search ツールを使用]
 | 起動時間 | < 2秒 | < 1秒 |
 | メモリ使用量 | < 500MB | ~200MB |
 
-## 6.2 テスト実績
+## 6.2 大規模リポジトリ実績 (v0.6.2)
+
+**Rustコンパイラリポジトリ** (rust-lang/rust) での実測:
+
+| 項目 | 値 |
+|------|------|
+| ファイル数 | 34,474 |
+| エンティティ数 | 230,796 |
+| リレーション数 | 651,140 |
+| インデックス時間 | ~128秒 |
+| コミュニティ検出 | 456 communities |
+
+## 6.3 テスト実績
 
 ```
-286 tests passed, 1 skipped
+300 tests passed, 1 skipped
 Coverage: 80%+
 ```
 
@@ -407,11 +429,15 @@ Coverage: 80%+
 3. **多言語対応**: 11言語をサポート
 4. **GraphRAG**: コードベース全体の理解を提供
 5. **MCP Native**: 14ツール、4リソース、6プロンプトの包括的実装
+6. **NEW: 部分ID検索**: 関数名だけでエンティティを特定
+7. **NEW: スコアリング**: 関連度の高い結果を優先表示
+8. **NEW: 自動コミュニティ**: インデックス時にコードクラスタを自動検出
 
 ## 8.2 リンク
 
 - **GitHub**: https://github.com/nahisaho/CodeGraphMCPServer
-- **PyPI**: https://pypi.org/project/codegraph-mcp/
+- **PyPI**: https://pypi.org/project/codegraph-mcp-server/
+- **バージョン**: v0.6.2 (2025-11-27)
 
 ## 8.3 今後の展望
 
