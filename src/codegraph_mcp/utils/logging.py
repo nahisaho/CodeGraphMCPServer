@@ -9,6 +9,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 
 # グローバルなログフォーマット設定
@@ -69,7 +70,7 @@ class StructuredLogger(logging.Logger):
         self,
         level: int,
         msg: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         構造化データ付きでログ出力
@@ -84,16 +85,16 @@ class StructuredLogger(logging.Logger):
             msg = f"{msg} | {extra_str}"
         self.log(level, msg)
 
-    def info_struct(self, msg: str, **kwargs) -> None:
+    def info_struct(self, msg: str, **kwargs: Any) -> None:
         self.structured(logging.INFO, msg, **kwargs)
 
-    def debug_struct(self, msg: str, **kwargs) -> None:
+    def debug_struct(self, msg: str, **kwargs: Any) -> None:
         self.structured(logging.DEBUG, msg, **kwargs)
 
-    def warning_struct(self, msg: str, **kwargs) -> None:
+    def warning_struct(self, msg: str, **kwargs: Any) -> None:
         self.structured(logging.WARNING, msg, **kwargs)
 
-    def error_struct(self, msg: str, **kwargs) -> None:
+    def error_struct(self, msg: str, **kwargs: Any) -> None:
         self.structured(logging.ERROR, msg, **kwargs)
 
 
@@ -197,7 +198,7 @@ class LogContext:
         self.logger.log(self.level, msg)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         elapsed = datetime.now() - self.start_time if self.start_time else None
         elapsed_ms = elapsed.total_seconds() * 1000 if elapsed else 0
 

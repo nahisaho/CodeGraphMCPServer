@@ -267,7 +267,7 @@ class GitOperations:
             error_msg = stderr.decode().strip()
             logger.error(f"Git command failed: {error_msg}")
             raise subprocess.CalledProcessError(
-                process.returncode,
+                process.returncode or 1,
                 cmd,
                 stdout,
                 stderr,

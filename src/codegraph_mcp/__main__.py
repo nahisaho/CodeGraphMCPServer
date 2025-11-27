@@ -688,12 +688,10 @@ def cmd_watch(args: argparse.Namespace) -> int:
         return 1
 
     from codegraph_mcp.core.indexer import Indexer
-    from codegraph_mcp.languages.config import LANGUAGE_CONFIG
+    from codegraph_mcp.core.parser import CodeParser
 
-    # Build set of supported extensions
-    supported_extensions = set()
-    for lang_config in LANGUAGE_CONFIG.values():
-        supported_extensions.update(lang_config.extensions)
+    # Build set of supported extensions from parser
+    supported_extensions = set(CodeParser.LANGUAGE_EXTENSIONS.keys())
 
     async def _watch() -> int:
         indexer = Indexer()
@@ -716,7 +714,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
         pending_files: set[Path] = set()
         last_change_time = 0.0
 
-        async def process_changes():
+        async def process_changes() -> None:
             """Process accumulated changes after debounce."""
             nonlocal pending_files, last_change_time
 
