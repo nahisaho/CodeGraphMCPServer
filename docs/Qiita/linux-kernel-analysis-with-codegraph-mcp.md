@@ -129,6 +129,8 @@ codegraph-mcp index . --full --no-community
 
 # 第3章 MCPサーバーの設定
 
+## 3.1 VS Code（GitHub Copilot）での設定
+
 MCPサーバーはクライアント（VS Code、Claude Desktop等）が自動的に起動します。手動で起動する必要はありません。
 
 VS Codeの設定（`.vscode/settings.json`）：
@@ -146,7 +148,36 @@ VS Codeの設定（`.vscode/settings.json`）：
 
 VS Codeを開き、GitHub Copilotが利用可能な状態にします。
 
-> **デバッグ用**: 手動でサーバーを起動する場合は `codegraph-mcp serve --repo /path/to/linux` を使用します。
+## 3.2 手動でのサーバー起動（デバッグ・確認用）
+
+### stdio トランスポート
+
+MCP クライアントから直接起動される方式です：
+
+```bash
+codegraph-mcp serve --repo /path/to/linux
+```
+
+### SSE（HTTP）トランスポート
+
+複数クライアントからの同時接続や、サーバーを起動したままインデックスを更新したい場合：
+
+```bash
+# SSEサーバーを起動（デフォルトポート: 8080）
+codegraph-mcp start --repo /path/to/linux
+
+# ポートを指定する場合
+codegraph-mcp start --repo /path/to/linux --port 3000
+```
+
+サーバーが起動すると、以下のようなメッセージが表示されます：
+
+```
+Starting SSE server on http://0.0.0.0:8080
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+```
+
+> **💡 ヒント**: `serve` は stdio トランスポート（MCP クライアント向け）、`start` は SSE トランスポート（HTTP サーバー）です。
 
 ---
 
