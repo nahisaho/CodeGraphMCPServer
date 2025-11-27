@@ -179,6 +179,79 @@ INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
 
 > **💡 ヒント**: `serve` は stdio トランスポート（MCP クライアント向け）、`start` は SSE トランスポート（HTTP サーバー）です。
 
+## 3.3 サーバーのステータス確認
+
+SSEサーバーが正常に起動しているか確認するには：
+
+```bash
+# ヘルスチェック
+curl http://localhost:8080/health
+
+# 正常時の応答
+{"status":"ok"}
+```
+
+別のターミナルからも確認できます：
+
+```bash
+# プロセスの確認
+ps aux | grep codegraph-mcp
+
+# ポートの確認
+lsof -i :8080
+# または
+ss -tlnp | grep 8080
+```
+
+## 3.4 サーバーの停止
+
+### フォアグラウンドで起動している場合
+
+```bash
+# Ctrl+C で停止
+^C
+INFO:     Shutting down
+INFO:     Finished server process
+```
+
+### バックグラウンドで起動している場合
+
+```bash
+# プロセスIDを確認して停止
+pkill -f "codegraph-mcp start"
+
+# または特定のポートを使用しているプロセスを停止
+kill $(lsof -t -i:8080)
+```
+
+### systemdサービスとして管理する場合（オプション）
+
+長期運用する場合は、systemdサービスとして登録することもできます：
+
+```ini
+# /etc/systemd/system/codegraph-mcp.service
+[Unit]
+Description=CodeGraph MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=your-username
+WorkingDirectory=/path/to/linux
+ExecStart=/usr/local/bin/codegraph-mcp start --port 8080
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# サービスの管理
+sudo systemctl start codegraph-mcp
+sudo systemctl status codegraph-mcp
+sudo systemctl stop codegraph-mcp
+```
+
 ---
 
 # 第4章 分析例
