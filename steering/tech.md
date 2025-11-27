@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.2
-**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.6.0-dev)
+**Version**: 2.4
+**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.6.2)
 
 ---
 
@@ -374,6 +374,20 @@ class MyParser:
   - `GraphQuery.include_related/include_community`: 拡張クエリオプション
   - `QueryResult.scores/communities`: スコアリング・コミュニティ情報
 - IndexResultに`changed_entity_ids`追加
+- テスト: 300 passed
+
+### Version 2.4 (2025-11-27)
+
+- v0.6.2リリース:
+  - コミュニティ検出最適化: `add_nodes_from()`/`add_edges_from()` バッチ処理
+  - `executemany()` によるDB書き込み最適化
+  - `max_nodes=50000` サンプリングによる大規模グラフ対応
+  - 230K+エンティティ（Rustコンパイラ）で検証済み
+- テスト: 300 passed
+
+### Version 2.3 (2025-11-27)
+
+- v0.6.0-dev機能追加
 - テスト: 294 passed
 
 ### Version 2.2 (2025-11-27)

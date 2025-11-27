@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.2
-**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.6.0-dev)
+**Version**: 2.4
+**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.6.2)
 
 ---
 
@@ -505,9 +505,9 @@ This structure enforces:
 | `tests/unit/` | 210+ | ✅ All Pass |
 | `tests/integration/` | 50+ | ✅ All Pass |
 | `tests/e2e/` | 10+ | ✅ All Pass |
-| **Total** | **295** | **294 passed, 1 skipped** |
+| **Total** | **301** | **300 passed, 1 skipped** |
 
-### Release Artifacts (v0.5.0)
+### Release Artifacts (v0.6.2)
 
 | File | Size | Status |
 |------|------|--------|
@@ -523,19 +523,28 @@ This structure enforces:
 | v0.3.0 | 2025-11-27 | +PHP, C#, C++, HCL, Ruby (11 languages) |
 | v0.4.0 | 2025-11-27 | CLI Progress Display |
 | v0.5.0 | 2025-11-27 | 47x Performance (Batch DB) |
-| **v0.6.0-dev** | **2025-11-27** | **Partial ID Match, Auto Community, Enhanced Query** |
+| v0.6.0 | 2025-11-27 | Background Server Management |
+| v0.6.1 | 2025-11-27 | SSE/Unicode Fixes |
+| **v0.6.2** | **2025-11-27** | **Partial ID, Auto Community, Large Repo Support** |
 
 ---
 
 ## Changelog
 
+### Version 2.5 (2025-11-27)
+
+- v0.6.2リリース:
+  - 大規模リポジトリ対応（230K+エンティティ）
+  - コミュニティ検出最適化（バッチ処理、サンプリング）
+  - Rustコンパイラリポジトリで検証済み
+- テストカウント: 301（300 passed, 1 skipped）
+
 ### Version 2.4 (2025-11-27)
 
-- v0.6.0-dev機能追加を反映:
-  - entity_id部分一致（`resolve_entity_id()`, `search_entities()`）
-  - 自動コミュニティ検出（index時の`--community`オプション）
-  - query_codebase改善（スコアリング、関連エンティティ）
-  - 増分コミュニティ更新（`update_incremental()`）
+- v0.6.0-dev機能追加:
+  - entity_id部分一致
+  - 自動コミュニティ検出
+  - query_codebase改善
 - テストカウント: 295（294 passed, 1 skipped）
 
 ### Version 2.3 (2025-11-27)

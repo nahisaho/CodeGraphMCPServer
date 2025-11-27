@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.4
-**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.6.0-dev)
+**Version**: 2.5
+**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.6.2)
 
 ---
 
@@ -467,6 +467,22 @@ CodeGraph MCP Serverは以下のアプローチでこれらの問題を解決し
   - 自動コミュニティ検出（`--community`/`--no-community`オプション）
   - query_codebase 改善（スコアリング、関連エンティティ、コミュニティ情報）
   - 増分コミュニティ更新（`update_incremental()`）
+- テスト: 300 passed
+
+### Version 2.5 (2025-11-27)
+
+- v0.6.2リリース:
+  - 大規模リポジトリ対応（230K+エンティティ）
+  - コミュニティ検出のパフォーマンス改善（サンプリング、バッチ処理）
+  - Rustコンパイラリポジトリで検証済み
+- テスト: 300 passed
+
+### Version 2.4 (2025-11-27)
+
+- v0.6.0-dev機能追加:
+  - entity_id部分一致検索
+  - 自動コミュニティ検出
+  - query_codebase改善
 - テスト: 294 passed
 
 ### Version 2.3 (2025-11-27)
