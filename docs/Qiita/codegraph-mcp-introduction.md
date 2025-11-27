@@ -1,10 +1,17 @@
-title: ゼロ構成で動く！コードグラフ分析MCPサーバー「CodeGraph MCP」の紹介
-tags: MCP Python AI CodeAnalysis GraphRAG
+---
+title: 'ゼロ構成で動く！コードグラフ分析MCPサーバー「CodeGraph MCP」の紹介'
+tags:
+  - MCP
+  - Python
+  - AI
+  - CodeAnalysis
+  - GraphRAG
 private: false
 updated_at: '2025-11-27'
 id: null
 organization_url_name: null
 slide: false
+---
 
 # 第1章 はじめに
 
