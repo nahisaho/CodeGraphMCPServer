@@ -250,42 +250,125 @@ codegraph-mcp query "<キーワード>" --format text
 
 **プロンプト:**
 ```
-fork システムコールの実装を追跡して、主要な関数の呼び出し階層を示して
+forkシステムコールの実装を追跡して、主要な関数の呼び出し階層を示して
 ```
 
 **Claude Codeの回答:**
 
 ```
-find_callees を使用して fork の呼び出しチェーンを分析しました。
+Linuxカーネル fork システムコール 呼び出し階層
 
-## fork システムコールの実装階層
+User Space
+    │
+    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  SYSCALL_DEFINE0(fork)                         [kernel/fork.c:2689]          │
+│  SYSCALL_DEFINE0(vfork)                        [kernel/fork.c:2705]          │
+│  SYSCALL_DEFINE5(clone, ...)                   [kernel/fork.c:2718-2738]     │
+│  SYSCALL_DEFINE2(clone3, ...)                  [kernel/fork.c:2890]          │
+└──────────────────────────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  kernel_clone(struct kernel_clone_args *args)  [kernel/fork.c:2568]          │
+│    ├─ ptrace_event_enabled() - ptraceイベント判定                             │
+│    ├─ copy_process() ─────────────────┐                                      │
+│    ├─ trace_sched_process_fork()      │                                      │
+│    ├─ get_task_pid()                  │                                      │
+│    ├─ wake_up_new_task() ────────┐    │                                      │
+│    └─ wait_for_vfork_done()      │    │                                      │
+└──────────────────────────────────┼────┼──────────────────────────────────────┘
+                                   │    │
+                    ┌──────────────┘    │
+                    ▼                   │
+┌─────────────────────────────────┐     │
+│  wake_up_new_task()             │     │
+│  [kernel/sched/core.c:4813]     │     │
+│    ├─ __set_task_cpu()          │     │
+│    ├─ select_task_rq()          │     │
+│    ├─ activate_task()           │     │
+│    │    └─ enqueue_task()       │     │
+│    ├─ wakeup_preempt()          │     │
+│    └─ task_woken() callback     │     │
+└─────────────────────────────────┘     │
+                                        │
+         ┌──────────────────────────────┘
+         ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  copy_process()                                [kernel/fork.c:1926]          │
+│  (プロセス複製の中核関数)                                                      │
+│                                                                              │
+│  1. フラグ検証                                                                │
+│     ├─ CLONE_NEWNS, CLONE_FS, CLONE_THREAD 等の組み合わせチェック              │
+│                                                                              │
+│  2. タスク構造体の複製                                                         │
+│     └─ dup_task_struct()              [kernel/fork.c:866]                    │
+│          ├─ alloc_task_struct_node() - task_struct メモリ確保                 │
+│          ├─ arch_dup_task_struct() - アーキテクチャ依存コピー                   │
+│          ├─ alloc_thread_stack_node() - スタック割り当て                       │
+│          └─ setup_thread_stack() - スタック設定                               │
+│                                                                              │
+│  3. 資格情報のコピー                                                          │
+│     └─ copy_creds()                   [kernel/cred.c]                        │
+│                                                                              │
+│  4. スケジューラ初期化                                                        │
+│     └─ sched_fork()                   [kernel/sched/core.c:4678]             │
+│          ├─ __sched_fork() - スケジューリングデータ初期化                       │
+│          ├─ p->__state = TASK_NEW                                            │
+│          ├─ uclamp_fork()                                                    │
+│          ├─ sched_class 設定 (rt/fair/ext)                                   │
+│          └─ init_entity_runnable_average()                                   │
+│                                                                              │
+│  5. 各種リソースのコピー                                                       │
+│     ├─ copy_files()                   [kernel/fork.c:1573] - fdテーブル       │
+│     ├─ copy_fs()                      [kernel/fork.c:1552] - ファイルシステム  │
+│     ├─ copy_sighand()                 [kernel/fork.c:1603] - シグナルハンドラ  │
+│     ├─ copy_signal()                  [kernel/fork.c:1652] - シグナル情報      │
+│     ├─ copy_mm()                      [kernel/fork.c:1514] - メモリ空間       │
+│     │    └─ dup_mm() → dup_mmap() (CLONE_VMがない場合)                        │
+│     ├─ copy_namespaces()              [kernel/nsproxy.c] - 名前空間           │
+│     ├─ copy_io()                      [block/blk-ioc.c] - I/Oコンテキスト      │
+│     └─ copy_thread()                  [arch依存] - レジスタ/スレッド情報       │
+│                                                                              │
+│  6. PID割り当て                                                               │
+│     └─ alloc_pid()                    [kernel/pid.c]                         │
+│                                                                              │
+│  7. cgroup処理                                                                │
+│     ├─ cgroup_can_fork()                                                     │
+│     └─ sched_cgroup_fork()            [kernel/sched/core.c:4748]             │
+│                                                                              │
+│  8. プロセスツリーへの追加                                                     │
+│     ├─ klp_copy_process() - Live Patch                                       │
+│     ├─ sched_core_fork()                                                     │
+│     ├─ init_task_pid() - PID設定                                             │
+│     ├─ attach_pid() - PIDハッシュ登録                                         │
+│     └─ list_add_tail() - 親子/兄弟リスト追加                                   │
+│                                                                              │
+│  9. 後処理                                                                    │
+│     ├─ sched_post_fork()                                                     │
+│     ├─ cgroup_post_fork()                                                    │
+│     └─ perf_event_fork()                                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-sys_fork() [kernel/fork.c]
-└── kernel_clone()
-    ├── copy_process()
-    │   ├── dup_task_struct()      # タスク構造体の複製
-    │   ├── copy_creds()           # 認証情報のコピー
-    │   ├── copy_semundo()         # セマフォundo情報
-    │   ├── copy_files()           # ファイルディスクリプタ
-    │   ├── copy_fs()              # ファイルシステム情報
-    │   ├── copy_sighand()         # シグナルハンドラ
-    │   ├── copy_signal()          # シグナル情報
-    │   ├── copy_mm()              # メモリマッピング (COW)
-    │   ├── copy_namespaces()      # 名前空間
-    │   ├── copy_io()              # I/Oコンテキスト
-    │   ├── copy_thread()          # アーキテクチャ固有スレッド情報
-    │   └── pid_alloc()            # 新しいPID割り当て
-    └── wake_up_new_task()         # 新プロセスを実行可能に
+## 主要関数の位置
 
-## 重要なポイント
-
-1. **Copy-on-Write (COW)**: copy_mm() ではメモリを実際にコピーせず、
-   ページテーブルを共有して書き込み時にコピーする
-
-2. **名前空間**: copy_namespaces() でプロセスの隔離レベルを制御
-
-3. **スレッド vs プロセス**: clone_flags によって共有する
-   リソースを細かく制御可能
+| 関数名                     | ファイル                | 行番号       |
+|-------------------------|---------------------|-----------|
+| SYSCALL_DEFINE0(fork)   | kernel/fork.c       | 2689      |
+| SYSCALL_DEFINE0(vfork)  | kernel/fork.c       | 2705      |
+| SYSCALL_DEFINE5(clone)  | kernel/fork.c       | 2718-2738 |
+| SYSCALL_DEFINE2(clone3) | kernel/fork.c       | 2890      |
+| kernel_clone()          | kernel/fork.c       | 2568      |
+| copy_process()          | kernel/fork.c       | 1926      |
+| dup_task_struct()       | kernel/fork.c       | 866       |
+| copy_mm()               | kernel/fork.c       | 1514      |
+| copy_files()            | kernel/fork.c       | 1573      |
+| copy_fs()               | kernel/fork.c       | 1552      |
+| copy_sighand()          | kernel/fork.c       | 1603      |
+| copy_signal()           | kernel/fork.c       | 1652      |
+| sched_fork()            | kernel/sched/core.c | 4678      |
+| sched_cgroup_fork()     | kernel/sched/core.c | 4748      |
+| wake_up_new_task()      | kernel/sched/core.c | 4813      |
 ```
 
 ## 3.4 分析例3: 特定の関数の影響範囲
