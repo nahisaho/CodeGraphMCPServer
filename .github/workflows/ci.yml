@@ -32,7 +32,7 @@ jobs:
 
       - name: Run type checking
         run: |
-          mypy src/codegraph_mcp --ignore-missing-imports
+          mypy src/codegraph_mcp
 
       - name: Run tests
         run: |
