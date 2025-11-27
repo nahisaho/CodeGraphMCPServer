@@ -25,7 +25,10 @@ def register(server: Server, config: Config) -> None:
             # Graph Query Tools (REQ-TLS-001 ~ REQ-TLS-006)
             Tool(
                 name="query_codebase",
-                description="Query the code graph using natural language",
+                description=(
+                    "Query the code graph using natural language. "
+                    "Returns entities with relevance scores and community info."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -38,19 +41,38 @@ def register(server: Server, config: Config) -> None:
                             "description": "Maximum results to return",
                             "default": 20,
                         },
+                        "include_related": {
+                            "type": "boolean",
+                            "description": "Include related entities",
+                            "default": True,
+                        },
+                        "entity_types": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Filter by entity types "
+                                "(function, class, method, module, variable)"
+                            ),
+                        },
                     },
                     "required": ["query"],
                 },
             ),
             Tool(
                 name="find_dependencies",
-                description="Find dependencies of a code entity",
+                description=(
+                    "Find dependencies of a code entity. "
+                    "Supports partial entity ID matching."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "entity_id": {
                             "type": "string",
-                            "description": "Entity identifier",
+                            "description": (
+                                "Entity identifier (full ID, name, or "
+                                "file::name pattern)"
+                            ),
                         },
                         "depth": {
                             "type": "integer",
@@ -63,13 +85,19 @@ def register(server: Server, config: Config) -> None:
             ),
             Tool(
                 name="find_callers",
-                description="Find all callers of a function or method",
+                description=(
+                    "Find all callers of a function or method. "
+                    "Supports partial entity ID matching."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "entity_id": {
                             "type": "string",
-                            "description": "Function/method identifier",
+                            "description": (
+                                "Function/method identifier (full ID, name, "
+                                "or file::name pattern)"
+                            ),
                         },
                     },
                     "required": ["entity_id"],
@@ -77,7 +105,10 @@ def register(server: Server, config: Config) -> None:
             ),
             Tool(
                 name="find_callees",
-                description="Find all functions called by an entity",
+                description=(
+                    "Find all functions called by an entity. "
+                    "Supports partial entity ID matching."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -315,12 +346,32 @@ async def _handle_query_codebase(
     engine: Any,
     config: Config,
 ) -> dict[str, Any]:
-    """Handle query_codebase tool."""
+    """Handle query_codebase tool with enhanced search."""
     from codegraph_mcp.core.graph import GraphQuery
-    
+    from codegraph_mcp.core.parser import EntityType
+
+    # Parse entity types if provided
+    entity_types = None
+    if "entity_types" in args and args["entity_types"]:
+        type_map = {
+            "function": EntityType.FUNCTION,
+            "class": EntityType.CLASS,
+            "method": EntityType.METHOD,
+            "module": EntityType.MODULE,
+            "variable": EntityType.VARIABLE,
+        }
+        entity_types = [
+            type_map[t.lower()]
+            for t in args["entity_types"]
+            if t.lower() in type_map
+        ]
+
     query = GraphQuery(
         query=args["query"],
         max_results=args.get("max_results", 20),
+        include_related=args.get("include_related", True),
+        include_community=True,
+        entity_types=entity_types if entity_types else None,
     )
     result = await engine.query(query)
     return result.to_dict()

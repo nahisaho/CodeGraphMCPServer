@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.1
-**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.5.0)
+**Version**: 2.2
+**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.6.0-dev)
 
 ---
 
@@ -364,6 +364,17 @@ class MyParser:
 ---
 
 ## Changelog
+
+### Version 2.3 (2025-11-27)
+
+- v0.6.0-dev 機能追加:
+  - `resolve_entity_id()`: 部分一致ID解決
+  - `search_entities()`: パターンベース検索
+  - `update_incremental()`: 増分コミュニティ更新
+  - `GraphQuery.include_related/include_community`: 拡張クエリオプション
+  - `QueryResult.scores/communities`: スコアリング・コミュニティ情報
+- IndexResultに`changed_entity_ids`追加
+- テスト: 294 passed
 
 ### Version 2.2 (2025-11-27)
 

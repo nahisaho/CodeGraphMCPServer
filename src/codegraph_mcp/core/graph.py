@@ -22,52 +22,68 @@ from codegraph_mcp.core.parser import Entity, Relation, EntityType, RelationType
 class GraphQuery:
     """
     Query specification for graph searches.
-    
+
     Requirements: REQ-TLS-001
     """
-    
+
     # Natural language query
     query: str
-    
+
     # Optional filters
     entity_types: list[EntityType] | None = None
     relation_types: list[RelationType] | None = None
     file_patterns: list[str] | None = None
-    
+
     # Search options
     max_depth: int = 3
     max_results: int = 100
     include_source: bool = False
+
+    # Enhanced query options
+    include_related: bool = True  # Include related entities
+    include_community: bool = True  # Include community info
 
 
 @dataclass
 class QueryResult:
     """
     Result of a graph query.
-    
+
     Requirements: REQ-TLS-001
     """
-    
+
     entities: list[Entity] = field(default_factory=list)
     relations: list[Relation] = field(default_factory=list)
     paths: list[list[str]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
-    
+    # Enhanced: scores for relevance ranking
+    scores: dict[str, float] = field(default_factory=dict)
+    # Enhanced: community info for entities
+    communities: dict[str, int] = field(default_factory=dict)
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
+        entities_list = []
+        for e in self.entities:
+            entity_dict = {
+                "id": e.id,
+                "type": e.type.value,
+                "name": e.name,
+                "qualified_name": e.qualified_name,
+                "file_path": str(e.file_path),
+                "start_line": e.start_line,
+                "end_line": e.end_line,
+            }
+            # Add score if available
+            if e.id in self.scores:
+                entity_dict["score"] = self.scores[e.id]
+            # Add community if available
+            if e.id in self.communities:
+                entity_dict["community_id"] = self.communities[e.id]
+            entities_list.append(entity_dict)
+
         return {
-            "entities": [
-                {
-                    "id": e.id,
-                    "type": e.type.value,
-                    "name": e.name,
-                    "qualified_name": e.qualified_name,
-                    "file_path": str(e.file_path),
-                    "start_line": e.start_line,
-                    "end_line": e.end_line,
-                }
-                for e in self.entities
-            ],
+            "entities": entities_list,
             "relations": [
                 {
                     "source_id": r.source_id,
@@ -79,12 +95,15 @@ class QueryResult:
             "paths": self.paths,
             "metadata": self.metadata,
         }
-    
+
     def __str__(self) -> str:
         """Human-readable string representation."""
         lines = [f"Found {len(self.entities)} entities:"]
         for e in self.entities[:10]:
-            lines.append(f"  - {e.type.value}: {e.qualified_name}")
+            score_str = ""
+            if e.id in self.scores:
+                score_str = f" (score: {self.scores[e.id]:.2f})"
+            lines.append(f"  - {e.type.value}: {e.qualified_name}{score_str}")
         if len(self.entities) > 10:
             lines.append(f"  ... and {len(self.entities) - 10} more")
         return "\n".join(lines)
@@ -380,11 +399,147 @@ class GraphEngine:
         await self._connection.commit()
         return len(relations)
     
+    async def resolve_entity_id(
+        self,
+        entity_id: str,
+        entity_type: EntityType | None = None,
+    ) -> str | None:
+        """
+        Resolve a partial entity ID to a full entity ID.
+        
+        Supports:
+        - Exact match: Returns if entity_id matches exactly
+        - Name match: Searches by entity name
+        - Qualified name suffix: Searches by qualified_name ending
+        - File + name: "filename::name" pattern
+        
+        Args:
+            entity_id: Full or partial entity identifier
+            entity_type: Optional type filter
+            
+        Returns:
+            Full entity ID or None if not found/ambiguous
+        """
+        # First try exact match
+        cursor = await self._connection.execute(
+            "SELECT id FROM entities WHERE id = ?",
+            (entity_id,),
+        )
+        row = await cursor.fetchone()
+        if row:
+            return row[0]
+        
+        # Build query for partial matches
+        type_filter = ""
+        params: list[Any] = []
+        
+        if entity_type:
+            type_filter = " AND type = ?"
+            params.append(entity_type.value)
+        
+        # Try name exact match (may return multiple)
+        cursor = await self._connection.execute(
+            f"""
+            SELECT id, qualified_name FROM entities
+            WHERE name = ?{type_filter}
+            ORDER BY LENGTH(id) ASC
+            LIMIT 10
+            """,
+            [entity_id] + params,
+        )
+        rows = await cursor.fetchall()
+        if len(rows) == 1:
+            return rows[0][0]
+        elif len(rows) > 1:
+            # Multiple matches - ambiguous, return None
+            return None
+
+        # Try qualified_name suffix match
+        cursor = await self._connection.execute(
+            f"""
+            SELECT id FROM entities
+            WHERE qualified_name LIKE ?{type_filter}
+            ORDER BY LENGTH(id) ASC
+            LIMIT 10
+            """,
+            [f"%{entity_id}"] + params,
+        )
+        rows = await cursor.fetchall()
+        if len(rows) == 1:
+            return rows[0][0]
+        elif len(rows) > 1:
+            # Multiple matches - ambiguous, return None
+            return None
+        
+        # Try file::name pattern
+        if "::" in entity_id:
+            parts = entity_id.rsplit("::", 1)
+            file_part, name_part = parts[0], parts[1]
+            cursor = await self._connection.execute(
+                f"""
+                SELECT id FROM entities 
+                WHERE name = ? AND file_path LIKE ?{type_filter}
+                ORDER BY LENGTH(id) ASC
+                LIMIT 10
+                """,
+                [name_part, f"%{file_part}%"] + params,
+            )
+            rows = await cursor.fetchall()
+            if rows:
+                return rows[0][0]
+        
+        return None
+    
+    async def search_entities(
+        self,
+        pattern: str,
+        entity_type: EntityType | None = None,
+        limit: int = 20,
+    ) -> list[Entity]:
+        """
+        Search entities by name pattern.
+        
+        Args:
+            pattern: Search pattern (supports SQL LIKE wildcards)
+            entity_type: Optional type filter
+            limit: Maximum results
+            
+        Returns:
+            List of matching entities
+        """
+        type_filter = ""
+        params: list[Any] = [f"%{pattern}%", f"%{pattern}%"]
+        
+        if entity_type:
+            type_filter = " AND type = ?"
+            params.append(entity_type.value)
+        
+        params.append(limit)
+        
+        cursor = await self._connection.execute(
+            f"""
+            SELECT * FROM entities 
+            WHERE (name LIKE ? OR qualified_name LIKE ?){type_filter}
+            ORDER BY 
+                CASE WHEN name = ? THEN 0 ELSE 1 END,
+                LENGTH(name) ASC
+            LIMIT ?
+            """,
+            params[:2] + [pattern] + params[2:],
+        )
+        rows = await cursor.fetchall()
+        return [self._row_to_entity(row) for row in rows]
+    
     async def get_entity(self, entity_id: str) -> Entity | None:
-        """Get an entity by ID."""
+        """Get an entity by ID (supports partial matching)."""
+        # Try to resolve partial ID
+        resolved_id = await self.resolve_entity_id(entity_id)
+        if not resolved_id:
+            return None
+        
         cursor = await self._connection.execute(
             "SELECT * FROM entities WHERE id = ?",
-            (entity_id,),
+            (resolved_id,),
         )
         row = await cursor.fetchone()
         if row:
@@ -394,56 +549,79 @@ class GraphEngine:
     async def find_callers(self, entity_id: str) -> list[Entity]:
         """
         Find all entities that call the given entity.
-        
+
+        Supports partial entity_id matching.
+
         Requirements: REQ-TLS-003
         """
+        # Resolve partial entity_id
+        resolved_id = await self.resolve_entity_id(entity_id)
+        if not resolved_id:
+            return []
+
         cursor = await self._connection.execute(
             """
             SELECT e.* FROM entities e
             JOIN relations r ON e.id = r.source_id
             WHERE r.target_id = ? AND r.type = 'calls'
             """,
-            (entity_id,),
+            (resolved_id,),
         )
         rows = await cursor.fetchall()
         return [self._row_to_entity(row) for row in rows]
-    
+
     async def find_callees(self, entity_id: str) -> list[Entity]:
         """
         Find all entities called by the given entity.
-        
+
+        Supports partial entity_id matching.
+
         Requirements: REQ-TLS-004
         """
+        # Resolve partial entity_id
+        resolved_id = await self.resolve_entity_id(entity_id)
+        if not resolved_id:
+            return []
+
         cursor = await self._connection.execute(
             """
             SELECT e.* FROM entities e
             JOIN relations r ON e.id = r.target_id
             WHERE r.source_id = ? AND r.type = 'calls'
             """,
-            (entity_id,),
+            (resolved_id,),
         )
         rows = await cursor.fetchall()
         return [self._row_to_entity(row) for row in rows]
-    
-    async def find_dependencies(self, entity_id: str, depth: int = 1) -> QueryResult:
+
+    async def find_dependencies(
+        self, entity_id: str, depth: int = 1
+    ) -> QueryResult:
         """
         Find dependencies of an entity up to given depth.
-        
+
+        Supports partial entity_id matching.
+
         Requirements: REQ-TLS-002
         """
+        # Resolve partial entity_id
+        resolved_id = await self.resolve_entity_id(entity_id)
+        if not resolved_id:
+            return QueryResult(entities=[], relations=[])
+
         visited: set[str] = set()
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         async def traverse(eid: str, current_depth: int) -> None:
             if eid in visited or current_depth > depth:
                 return
             visited.add(eid)
-            
+
             entity = await self.get_entity(eid)
             if entity:
                 entities.append(entity)
-            
+
             cursor = await self._connection.execute(
                 """
                 SELECT target_id, type, weight FROM relations
@@ -460,57 +638,192 @@ class GraphEngine:
                 )
                 relations.append(rel)
                 await traverse(row[0], current_depth + 1)
-        
-        await traverse(entity_id, 0)
+
+        await traverse(resolved_id, 0)
         return QueryResult(entities=entities, relations=relations)
-    
+
     async def query(self, query: str | GraphQuery) -> QueryResult:
         """
-        Execute a graph query.
-        
+        Execute a graph query with relevance scoring.
+
         Args:
             query: Query string or GraphQuery object
-            
+
         Returns:
-            QueryResult with matching entities and relations
-            
+            QueryResult with matching entities, scores, and community info
+
         Requirements: REQ-TLS-001
         """
         if isinstance(query, str):
             query = GraphQuery(query=query)
-        
-        # Build SQL query based on parameters
-        sql = "SELECT * FROM entities WHERE 1=1"
+
+        search_term = query.query.lower()
+        scores: dict[str, float] = {}
+        communities: dict[str, int] = {}
+        all_entities: list[Entity] = []
+        all_relations: list[Relation] = []
+
+        # Phase 1: Direct matches with scoring
+        base_sql = """
+            SELECT *, community_id FROM entities WHERE 1=1
+        """
         params: list[Any] = []
-        
+
         if query.entity_types:
             placeholders = ",".join("?" * len(query.entity_types))
-            sql += f" AND type IN ({placeholders})"
+            base_sql += f" AND type IN ({placeholders})"
             params.extend(t.value for t in query.entity_types)
-        
+
         if query.file_patterns:
             pattern_conditions = []
             for pattern in query.file_patterns:
                 pattern_conditions.append("file_path LIKE ?")
                 params.append(f"%{pattern}%")
-            sql += f" AND ({' OR '.join(pattern_conditions)})"
-        
-        # Text search in name and qualified_name
+            base_sql += f" AND ({' OR '.join(pattern_conditions)})"
+
+        # Text search with different matching strategies
         if query.query:
-            sql += " AND (name LIKE ? OR qualified_name LIKE ?)"
+            base_sql += " AND (name LIKE ? OR qualified_name LIKE ?)"
             params.extend([f"%{query.query}%", f"%{query.query}%"])
-        
-        sql += f" LIMIT {query.max_results}"
-        
-        cursor = await self._connection.execute(sql, params)
+
+        base_sql += f" LIMIT {query.max_results * 2}"  # Get more for scoring
+
+        cursor = await self._connection.execute(base_sql, params)
         rows = await cursor.fetchall()
-        
-        entities = [self._row_to_entity(row) for row in rows]
-        
+
+        seen_ids: set[str] = set()
+        for row in rows:
+            entity = self._row_to_entity(row)
+            if entity.id not in seen_ids:
+                seen_ids.add(entity.id)
+                all_entities.append(entity)
+
+                # Calculate relevance score
+                score = self._calculate_relevance_score(
+                    entity, search_term
+                )
+                scores[entity.id] = score
+
+                # Track community
+                if len(row) > 10 and row[10] is not None:
+                    communities[entity.id] = row[10]
+
+        # Phase 2: Include related entities if enabled
+        if query.include_related and all_entities:
+            direct_ids = list(seen_ids)
+            related_entities, related_relations = await self._get_related(
+                direct_ids[:20],  # Limit for performance
+                query.max_results // 2,
+            )
+
+            for entity in related_entities:
+                if entity.id not in seen_ids:
+                    seen_ids.add(entity.id)
+                    all_entities.append(entity)
+                    # Related entities get lower base score
+                    scores[entity.id] = 0.3
+
+            all_relations.extend(related_relations)
+
+        # Phase 3: Add community info if enabled
+        if query.include_community:
+            for entity in all_entities:
+                if entity.id not in communities:
+                    cursor = await self._connection.execute(
+                        "SELECT community_id FROM entities WHERE id = ?",
+                        (entity.id,),
+                    )
+                    row = await cursor.fetchone()
+                    if row and row[0] is not None:
+                        communities[entity.id] = row[0]
+
+        # Sort by score and limit results
+        all_entities.sort(key=lambda e: scores.get(e.id, 0), reverse=True)
+        all_entities = all_entities[:query.max_results]
+
         return QueryResult(
-            entities=entities,
-            metadata={"query": query.query, "count": len(entities)},
+            entities=all_entities,
+            relations=all_relations,
+            scores=scores,
+            communities=communities,
+            metadata={
+                "query": query.query,
+                "count": len(all_entities),
+                "include_related": query.include_related,
+            },
         )
+
+    def _calculate_relevance_score(
+        self, entity: Entity, search_term: str
+    ) -> float:
+        """Calculate relevance score for an entity."""
+        score = 0.0
+        name_lower = entity.name.lower()
+        qualified_lower = entity.qualified_name.lower()
+
+        # Exact name match: highest score
+        if name_lower == search_term:
+            score += 1.0
+        # Name starts with search term
+        elif name_lower.startswith(search_term):
+            score += 0.8
+        # Name contains search term
+        elif search_term in name_lower:
+            score += 0.6
+
+        # Qualified name bonus
+        if search_term in qualified_lower:
+            score += 0.2
+
+        # Entity type bonus (functions/classes are often more relevant)
+        if entity.type in (EntityType.FUNCTION, EntityType.CLASS):
+            score += 0.1
+
+        return min(score, 1.0)
+
+    async def _get_related(
+        self, entity_ids: list[str], limit: int
+    ) -> tuple[list[Entity], list[Relation]]:
+        """Get entities related to the given entities."""
+        if not entity_ids:
+            return [], []
+
+        entities: list[Entity] = []
+        relations: list[Relation] = []
+
+        placeholders = ",".join("?" * len(entity_ids))
+
+        # Get direct relations
+        cursor = await self._connection.execute(
+            f"""
+            SELECT DISTINCT target_id, type, weight FROM relations
+            WHERE source_id IN ({placeholders})
+            UNION
+            SELECT DISTINCT source_id, type, weight FROM relations
+            WHERE target_id IN ({placeholders})
+            LIMIT ?
+            """,
+            entity_ids + entity_ids + [limit * 2],
+        )
+        related_rows = await cursor.fetchall()
+
+        related_ids: set[str] = set()
+        for row in related_rows:
+            related_ids.add(row[0])
+
+        # Filter out already known IDs
+        related_ids -= set(entity_ids)
+
+        if related_ids:
+            id_placeholders = ",".join("?" * len(related_ids))
+            cursor = await self._connection.execute(
+                f"SELECT * FROM entities WHERE id IN ({id_placeholders})",
+                list(related_ids),
+            )
+            for row in await cursor.fetchall():
+                entities.append(self._row_to_entity(row))
+
+        return entities[:limit], relations
     
     async def get_statistics(self) -> GraphStatistics:
         """

@@ -125,6 +125,17 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Perform full re-indexing",
     )
+    index_parser.add_argument(
+        "--community",
+        action="store_true",
+        default=True,
+        help="Auto-detect communities after indexing (default: True)",
+    )
+    index_parser.add_argument(
+        "--no-community",
+        action="store_true",
+        help="Skip community detection",
+    )
 
     # query command (REQ-TLS-001)
     query_parser = subparsers.add_parser("query", help="Execute a graph query")
@@ -336,7 +347,8 @@ def cmd_index(args: argparse.Namespace) -> int:
     async def _index() -> int:
         indexer = Indexer()
         incremental = not args.full
-        
+        run_community = args.community and not args.no_community
+
         # Check if rich is available for progress display
         try:
             from rich.console import Console
@@ -348,16 +360,22 @@ def cmd_index(args: argparse.Namespace) -> int:
                 TimeElapsedColumn,
             )
             from rich.table import Table
-            
+
             # Force UTF-8 safe output
             console = Console(force_terminal=True, legacy_windows=True)
-            
+
             # Show start message
             mode = "Full" if args.full else "Incremental"
             console.print("\n[bold blue]CodeGraph Indexer[/bold blue]")
             console.print(f"Repository: [cyan]{args.path}[/cyan]")
-            console.print(f"Mode: [yellow]{mode}[/yellow]\n")
-            
+            console.print(f"Mode: [yellow]{mode}[/yellow]")
+            if run_community:
+                console.print(
+                    "[dim]Community detection: enabled[/dim]\n"
+                )
+            else:
+                console.print()
+
             with Progress(
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
@@ -370,7 +388,7 @@ def cmd_index(args: argparse.Namespace) -> int:
                     "[cyan]Indexing files...",
                     total=None,  # Indeterminate at first
                 )
-                
+
                 # Run indexer with progress callback
                 result = await indexer.index_repository(
                     args.path,
@@ -387,28 +405,85 @@ def cmd_index(args: argparse.Namespace) -> int:
                         )
                     ),
                 )
-                
+
                 # Complete the task
                 progress.update(
                     task,
                     completed=result.files_indexed,
-                    description="[green]Complete!",
+                    description="[green]Indexing complete!",
                 )
-            
+
+                # Run community detection if enabled
+                community_result = None
+                if run_community and result.success:
+                    from codegraph_mcp.core.graph import GraphEngine
+                    from codegraph_mcp.core.community import CommunityDetector
+
+                    engine = GraphEngine(args.path)
+                    await engine.initialize()
+                    try:
+                        detector = CommunityDetector()
+
+                        if (
+                            incremental
+                            and result.files_indexed > 0
+                            and result.changed_entity_ids
+                        ):
+                            # Incremental: update communities for changed
+                            progress.update(
+                                task,
+                                total=None,
+                                completed=0,
+                                description=(
+                                    "[cyan]Updating communities "
+                                    "(incremental)..."
+                                ),
+                            )
+                            community_result = await detector.update_incremental(
+                                engine,
+                                result.changed_entity_ids,
+                            )
+                        else:
+                            # Full: detect all communities
+                            progress.update(
+                                task,
+                                total=None,
+                                completed=0,
+                                description="[cyan]Detecting communities...",
+                            )
+                            community_result = await detector.detect(engine)
+                    finally:
+                        await engine.close()
+
+                    progress.update(
+                        task,
+                        description="[green]Complete!",
+                    )
+
             # Show results in a nice table
             console.print()
             table = Table(title="Indexing Results", show_header=False)
             table.add_column("Metric", style="cyan")
             table.add_column("Value", style="green")
-            
+
             table.add_row("Entities", str(result.entities_count))
             table.add_row("Relations", str(result.relations_count))
             table.add_row("Files Indexed", str(result.files_indexed))
             table.add_row("Files Skipped", str(result.files_skipped))
             table.add_row("Duration", f"{result.duration_seconds:.2f}s")
-            
+
+            if community_result:
+                table.add_row(
+                    "Communities",
+                    str(len(community_result.communities))
+                )
+                table.add_row(
+                    "Modularity",
+                    f"{community_result.modularity:.4f}"
+                )
+
             console.print(table)
-            
+
             if result.errors:
                 err_msg = f"\n[red]Errors: {len(result.errors)}[/red]"
                 console.print(err_msg)
@@ -417,9 +492,9 @@ def cmd_index(args: argparse.Namespace) -> int:
             else:
                 msg = "\n[green]Indexing completed successfully![/green]\n"
                 console.print(msg)
-            
+
             return 0 if result.success else 1
-            
+
         except ImportError:
             # Fallback to simple output without rich
             result = await indexer.index_repository(
@@ -429,6 +504,37 @@ def cmd_index(args: argparse.Namespace) -> int:
             print(f"Indexed {result.entities_count} entities, "
                   f"{result.relations_count} relations in "
                   f"{result.duration_seconds:.2f}s")
+
+            # Run community detection if enabled
+            if run_community and result.success:
+                from codegraph_mcp.core.graph import GraphEngine
+                from codegraph_mcp.core.community import CommunityDetector
+
+                engine = GraphEngine(args.path)
+                await engine.initialize()
+                try:
+                    detector = CommunityDetector()
+                    if (
+                        incremental
+                        and result.files_indexed > 0
+                        and result.changed_entity_ids
+                    ):
+                        print("Updating communities (incremental)...")
+                        community_result = await detector.update_incremental(
+                            engine, result.changed_entity_ids
+                        )
+                        print("Communities updated incrementally")
+                    else:
+                        print("Detecting communities...")
+                        community_result = await detector.detect(engine)
+                        print(
+                            f"Detected {len(community_result.communities)} "
+                            f"communities (modularity: "
+                            f"{community_result.modularity:.4f})"
+                        )
+                finally:
+                    await engine.close()
+
             if result.errors:
                 print(f"Errors: {len(result.errors)}")
                 for err in result.errors[:5]:

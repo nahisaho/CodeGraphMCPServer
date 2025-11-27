@@ -142,7 +142,12 @@ class TestIndexCommand:
         from codegraph_mcp.__main__ import cmd_index
         import argparse
 
-        args = argparse.Namespace(path=temp_repo, full=False)
+        args = argparse.Namespace(
+            path=temp_repo,
+            full=False,
+            community=True,
+            no_community=False,
+        )
         result = cmd_index(args)
 
         assert result == 0
@@ -160,7 +165,12 @@ class TestStatsCommand:
 
         # First index the repo
         from codegraph_mcp.__main__ import cmd_index
-        index_args = argparse.Namespace(path=temp_repo, full=False)
+        index_args = argparse.Namespace(
+            path=temp_repo,
+            full=False,
+            community=True,
+            no_community=False,
+        )
         cmd_index(index_args)
 
         # Then get stats

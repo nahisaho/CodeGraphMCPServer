@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2025-11-27
+
+### Added
+
+#### Entity ID Partial Matching
+- **`resolve_entity_id()`**: Resolve partial entity IDs to full IDs
+  - Exact match, name match, qualified_name suffix match
+  - `file::name` pattern support (e.g., `linux.rs::hashmap_random_keys`)
+- **`search_entities()`**: Pattern-based entity search
+- Partial ID support in `find_callers()`, `find_callees()`, `find_dependencies()`
+
+#### Auto Community Detection
+- **`--community` flag** (default): Auto-detect communities after indexing
+- **`--no-community` flag**: Skip community detection for large repositories
+- Displays community count and modularity in index results
+
+#### Enhanced query_codebase
+- **Relevance scoring**: Exact match (1.0), starts with (0.8), contains (0.6)
+- **`include_related`**: Include related entities in results
+- **`include_community`**: Include community information
+- **`entity_types` filter**: Filter by function, class, method, etc.
+- Score and community_id included in JSON output
+
+#### Incremental Community Update
+- **`update_incremental()`**: Reassign changed entities to best-fit communities
+- 20% change threshold triggers full re-detection
+- `IndexResult.changed_entity_ids` for tracking changes
+
+### Changed
+
+#### Community Detection Performance
+- **Batch graph building**: `add_nodes_from()` / `add_edges_from()` for speed
+- **Batch DB writes**: `executemany()` for community storage
+- **Large graph sampling**: `max_nodes=50000` with degree-based sampling
+- Successfully processes 230K+ entity repositories
+
+### Tests
+- Added 6 new tests for scoring and community integration
+- Total: 300 passed, 1 skipped
+
+---
+
 ## [0.6.1] - 2025-11-27
 
 ### Fixed

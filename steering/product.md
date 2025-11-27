@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.3
-**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.5.0)
+**Version**: 2.4
+**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.6.0-dev)
 
 ---
 
@@ -459,6 +459,15 @@ CodeGraph MCP Serverは以下のアプローチでこれらの問題を解決し
 ---
 
 ## Changelog
+
+### Version 2.4 (2025-11-27)
+
+- v0.6.0-dev 機能追加:
+  - entity_id 部分一致検索（名前、パターンマッチ）
+  - 自動コミュニティ検出（`--community`/`--no-community`オプション）
+  - query_codebase 改善（スコアリング、関連エンティティ、コミュニティ情報）
+  - 増分コミュニティ更新（`update_incremental()`）
+- テスト: 294 passed
 
 ### Version 2.3 (2025-11-27)
 

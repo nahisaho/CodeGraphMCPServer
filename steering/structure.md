@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-11-27
-**Version**: 2.1
-**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.5.0)
+**Version**: 2.2
+**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.6.0-dev)
 
 ---
 
@@ -498,14 +498,14 @@ This structure enforces:
 | `CHANGELOG.md` | ✅ Complete | 変更履歴 |
 | `RELEASE_NOTES.md` | ✅ Complete | リリースノート |
 
-### Test Coverage (v0.5.0)
+### Test Coverage (v0.6.0-dev)
 
 | Directory | Tests | Status |
 |-----------|-------|--------|
-| `tests/unit/` | 200+ | ✅ All Pass |
+| `tests/unit/` | 210+ | ✅ All Pass |
 | `tests/integration/` | 50+ | ✅ All Pass |
 | `tests/e2e/` | 10+ | ✅ All Pass |
-| **Total** | **286** | **285 passed, 1 skipped** |
+| **Total** | **295** | **294 passed, 1 skipped** |
 
 ### Release Artifacts (v0.5.0)
 
@@ -522,11 +522,21 @@ This structure enforces:
 | v0.2.0 | 2025-11-27 | +Go, Java |
 | v0.3.0 | 2025-11-27 | +PHP, C#, C++, HCL, Ruby (11 languages) |
 | v0.4.0 | 2025-11-27 | CLI Progress Display |
-| **v0.5.0** | **2025-11-27** | **47x Performance (Batch DB)** |
+| v0.5.0 | 2025-11-27 | 47x Performance (Batch DB) |
+| **v0.6.0-dev** | **2025-11-27** | **Partial ID Match, Auto Community, Enhanced Query** |
 
 ---
 
 ## Changelog
+
+### Version 2.4 (2025-11-27)
+
+- v0.6.0-dev機能追加を反映:
+  - entity_id部分一致（`resolve_entity_id()`, `search_entities()`）
+  - 自動コミュニティ検出（index時の`--community`オプション）
+  - query_codebase改善（スコアリング、関連エンティティ）
+  - 増分コミュニティ更新（`update_incremental()`）
+- テストカウント: 295（294 passed, 1 skipped）
 
 ### Version 2.3 (2025-11-27)
 

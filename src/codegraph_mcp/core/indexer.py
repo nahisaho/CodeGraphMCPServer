@@ -25,14 +25,16 @@ ProgressCallback = Callable[[int, int, Path | None], None]
 @dataclass
 class IndexResult:
     """Result of indexing operation."""
-    
+
     entities_count: int = 0
     relations_count: int = 0
     files_indexed: int = 0
     files_skipped: int = 0
     errors: list[str] = field(default_factory=list)
     duration_seconds: float = 0.0
-    
+    # Track entity IDs that were added/updated for incremental community update
+    changed_entity_ids: list[str] = field(default_factory=list)
+
     @property
     def success(self) -> bool:
         return len(self.errors) == 0
@@ -112,32 +114,36 @@ class Indexer:
         all_entities: list[Entity] = []
         all_relations: list[Relation] = []
         file_updates: list[tuple[Path, ParseResult]] = []
-        
+
         try:
             # Get files to index
             if incremental:
                 files = await self._get_changed_files(repo_path)
             else:
                 files = self._get_all_files(repo_path)
-            
+
             total_files = len(files)
-            
+
             # Parse each file and collect results
             for idx, file_path in enumerate(files):
                 # Report progress
                 if progress_callback:
                     progress_callback(idx, total_files, file_path)
-                
+
                 try:
                     parse_result = self.parser.parse_file(file_path)
-                    
+
                     if parse_result.success:
                         all_entities.extend(parse_result.entities)
                         all_relations.extend(parse_result.relations)
                         file_updates.append((file_path, parse_result))
                         result.entities_count += len(parse_result.entities)
                         result.relations_count += len(parse_result.relations)
-                    
+                        # Track changed entity IDs for incremental community
+                        result.changed_entity_ids.extend(
+                            e.id for e in parse_result.entities
+                        )
+
                     result.files_indexed += 1
                 except Exception as e:
                     result.errors.append(f"{file_path}: {e}")
