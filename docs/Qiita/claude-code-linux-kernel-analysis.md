@@ -375,45 +375,103 @@ User Space
 
 **プロンプト:**
 ```
-mutex_lock 関数を変更した場合、どのコードに影響がありますか？
+mutex_lock関数を変更した場合、どのコードに影響がありますか？
 ```
 
 **Claude Codeの回答:**
 
 ```
-find_callers を使用して mutex_lock の呼び出し元を分析しました。
+mutex_lock 変更の影響範囲
 
-## mutex_lock の影響範囲
+## 影響の概要
 
-mutex_lock() は kernel/ 配下だけで 500+ 箇所から呼び出されています。
+mutex_lock() は Linuxカーネル全体で 23,243箇所 で使用されており、
+関連API全体では 54,047箇所 に影響します。
 
-### 主要な呼び出し元カテゴリ
+## 実装ファイル
 
-1. **スケジューラ** (kernel/sched/)
-   - task_rq_lock()
-   - __sched_setscheduler()
+| ファイル                         | 行番号 | 設定                |
+|------------------------------|-----|-------------------|
+| kernel/locking/mutex.c       | 269 | 通常 (非 PREEMPT_RT) |
+| kernel/locking/rtmutex_api.c | 601 | PREEMPT_RT        |
 
-2. **プロセス管理** (kernel/fork.c, kernel/exit.c)
-   - copy_process()
-   - do_exit()
+## mutex_lock() の内部呼び出し
 
-3. **シグナル処理** (kernel/signal.c)
-   - do_sigaction()
-   - send_signal()
+mutex_lock(lock)
+    │
+    ├─ might_sleep()           // スリープ可能性チェック
+    │
+    └─ __mutex_trylock_fast()  [mutex.c:150] - ファストパス
+         │
+         ├─ 成功 → 即座にリターン
+         │
+         └─ 失敗 → __mutex_lock_slowpath() [mutex.c:1047]
+                    └─ __mutex_lock() → スピン/スリープ待ち
 
-4. **時間管理** (kernel/time/)
-   - do_timer()
-   - hrtimer_run_queues()
+## サブシステム別使用箇所
 
-### 変更時の注意点
+| サブシステム   | 使用箇所数  | 主な影響領域       |
+|----------|--------|--------------|
+| drivers/ | 18,499 | デバイスドライバ全般   |
+| fs/      | 1,078  | ファイルシステム     |
+| net/     | 823    | ネットワークスタック   |
+| kernel/  | 708    | コア機能         |
+| arch/    | 701    | アーキテクチャ依存コード |
+| sound/   | 686    | オーディオサブシステム  |
+| mm/      | 124    | メモリ管理        |
+| block/   | 110    | ブロックデバイス     |
 
-⚠️ mutex_lock は非常に広く使われているため、
-   変更は以下に影響する可能性があります：
+## drivers/ 内の内訳
 
-- デッドロック検出ロジック
-- ロック順序の規約
-- パフォーマンス（特にスピンロック fallback）
-- CONFIG_DEBUG_MUTEXES 関連のデバッグ機能
+| サブディレクトリ            | 使用箇所数 |
+|---------------------|-------|
+| drivers/net/        | 3,830 |
+| drivers/gpu/        | 2,450 |
+| drivers/media/      | 1,607 |
+| drivers/iio/        | 895   |
+| drivers/hwmon/      | 808   |
+| drivers/usb/        | 720   |
+| drivers/infiniband/ | 565   |
+| drivers/scsi/       | 512   |
+
+## kernel/ 内の内訳
+
+| サブディレクトリ           | 使用箇所数 |
+|--------------------|-------|
+| kernel/trace/      | 196   |
+| kernel/bpf/        | 64    |
+| kernel/locking/    | 62    |
+| kernel/events/     | 49    |
+| kernel/workqueue.c | 47    |
+| kernel/sched/      | 31    |
+| kernel/cgroup/     | 29    |
+
+## 関連API (同時に影響を受ける可能性)
+
+| API                        | 使用箇所数   |
+|----------------------------|---------|
+| mutex_lock()               | 23,243  |
+| mutex_unlock()             | ~23,000 |
+| mutex_lock_nested()        | 約600    |
+| mutex_lock_interruptible() | 約400    |
+| mutex_lock_killable()      | 約100    |
+| mutex_trylock()            | 約3,500  |
+
+## 変更時の注意点
+
+1. CONFIG_PREEMPT_RT: RTカーネルではrtmutexベースの実装を使用
+2. CONFIG_DEBUG_LOCK_ALLOC: デバッグ時はmutex_lock_nested()へのマクロ展開
+3. スリープ可能コンテキスト: might_sleep()によりアトミックコンテキストでの使用を検出
+4. ロックデップ: デッドロック検出のための依存関係追跡
+
+## テスト推奨範囲
+
+変更内容に応じて:
+- 全ドライバのストレステスト
+- ファイルシステムI/Oテスト
+- ネットワーク負荷テスト
+- スケジューラ/コアのストレステスト
+- lockdepを有効にしたビルド・テスト
 ```
 
 ## 3.5 分析例4: コードスニペットの取得
