@@ -478,70 +478,201 @@ mutex_lock(lock)
 
 **プロンプト:**
 ```
-context_switch 関数のソースコードを見せて
+context_switch関数のソースコードを見せて
 ```
 
 **Claude Codeの回答:**
 
 ```
-get_code_snippet を使用してソースコードを取得しました。
+context_switch 関数のソースコード
 
-## context_switch() - kernel/sched/core.c
+ファイル: kernel/sched/core.c:5269-5329
 
-```c
-/*
- * context_switch - switch to the new MM and the new thread's register state.
- */
-static __always_inline struct rq *
 context_switch(struct rq *rq, struct task_struct *prev,
-               struct task_struct *next, struct rq_flags *rf)
+             struct task_struct *next, struct rq_flags *rf)
 {
-    prepare_task_switch(rq, prev, next);
+      prepare_task_switch(rq, prev, next);
 
-    /*
-     * For paravirt, this is coupled with an exit in switch_to to
-     * combine the page table reload and the switch backend into
-     * one hypercall.
-     */
-    arch_start_context_switch(prev);
+      /*
+       * For paravirt, this is coupled with an exit in switch_to to
+       * combine the page table reload and the switch backend into
+       * one hypercall.
+       */
+      arch_start_context_switch(prev);
 
-    /*
-     * kernel -> kernel   lazy + transfer active
-     *   user -> kernel   lazy + mmgrab() active
-     *
-     * kernel ->   user   switch + mmdrop() active
-     *   user ->   user   switch
-     */
-    if (!next->mm) {                                // to kernel
-        enter_lazy_tlb(prev->active_mm, next);
-        next->active_mm = prev->active_mm;
-        if (prev->mm)                               // from user
-            mmgrab(prev->active_mm);
-        else
-            prev->active_mm = NULL;
-    } else {                                        // to user
-        membarrier_switch_mm(rq, prev->active_mm, next->mm);
-        switch_mm_irqs_off(prev->active_mm, next->mm, next);
-        if (!prev->mm) {                            // from kernel
-            rq->prev_mm = prev->active_mm;
-            prev->active_mm = NULL;
-        }
-    }
+      /*
+       * kernel -> kernel   lazy + transfer active
+       *   user -> kernel   lazy + mmgrab_lazy_tlb() active
+       *
+       * kernel ->   user   switch + mmdrop_lazy_tlb() active
+       *   user ->   user   switch
+       *
+       * switch_mm_cid() needs to be updated if the barriers provided
+       * by context_switch() are modified.
+       */
+      if (!next->mm) {                                // to kernel
+              enter_lazy_tlb(prev->active_mm, next);
 
-    /* switch_to() に続く... */
-    switch_to(prev, next, prev);
-    barrier();
+              next->active_mm = prev->active_mm;
+              if (prev->mm)                           // from user
+                      mmgrab_lazy_tlb(prev->active_mm);
+              else
+                      prev->active_mm = NULL;
+      } else {                                        // to user
+              membarrier_switch_mm(rq, prev->active_mm, next->mm);
+              /*
+               * sys_membarrier() requires an smp_mb() between setting
+               * rq->curr / membarrier_switch_mm() and returning to userspace.
+               *
+               * The below provides this either through switch_mm(), or in
+               * case 'prev->active_mm == next->mm' through
+               * finish_task_switch()'s mmdrop().
+               */
+              switch_mm_irqs_off(prev->active_mm, next->mm, next);
+              lru_gen_use_mm(next->mm);
 
-    return finish_task_switch(prev);
+              if (!prev->mm) {                        // from kernel
+                      /* will mmdrop_lazy_tlb() in finish_task_switch(). */
+                      rq->prev_mm = prev->active_mm;
+                      prev->active_mm = NULL;
+              }
+      }
+
+      /* switch_mm_cid() requires the memory barriers above. */
+      switch_mm_cid(rq, prev, next);
+
+      prepare_lock_switch(rq, next, rf);
+
+      /* Here we just switch the register state and the stack. */
+      switch_to(prev, next, prev);
+      barrier();
+
+      return finish_task_switch(prev);
 }
-```
 
-### コードの解説
+---
+## 関連関数
 
-1. **prepare_task_switch**: コンテキストスイッチの準備
-2. **enter_lazy_tlb / switch_mm_irqs_off**: メモリマッピングの切り替え
-3. **switch_to**: アーキテクチャ固有のレジスタ切り替え（アセンブラ）
-4. **finish_task_switch**: 後処理
+### prepare_task_switch (core.c:5117-5129)
+
+static inline void
+prepare_task_switch(struct rq *rq, struct task_struct *prev,
+                  struct task_struct *next)
+{
+      kcov_prepare_switch(prev);
+      sched_info_switch(rq, prev, next);
+      perf_event_task_sched_out(prev, next);
+      rseq_preempt(prev);
+      fire_sched_out_preempt_notifiers(prev, next);
+      kmap_local_sched_out();
+      prepare_task(next);
+      prepare_arch_switch(next);
+}
+
+### finish_task_switch (core.c:5150-5232)
+
+static struct rq *finish_task_switch(struct task_struct *prev)
+      __releases(rq->lock)
+{
+      struct rq *rq = this_rq();
+      struct mm_struct *mm = rq->prev_mm;
+      unsigned int prev_state;
+
+      /* preempt_count チェック */
+      if (WARN_ONCE(preempt_count() != 2*PREEMPT_DISABLE_OFFSET,
+                    "corrupted preempt_count: %s/%d/0x%x\n",
+                    current->comm, current->pid, preempt_count()))
+              preempt_count_set(FORK_PREEMPT_COUNT);
+
+      rq->prev_mm = NULL;
+
+      prev_state = READ_ONCE(prev->__state);
+      vtime_task_switch(prev);
+      perf_event_task_sched_in(prev, current);
+      finish_task(prev);
+      tick_nohz_task_switch();
+      finish_lock_switch(rq);
+      finish_arch_post_lock_switch();
+      kcov_finish_switch(current);
+      kmap_local_sched_in();
+
+      fire_sched_in_preempt_notifiers(current);
+
+      if (mm) {
+              membarrier_mm_sync_core_before_usermode(mm);
+              mmdrop_lazy_tlb_sched(mm);
+      }
+
+      if (unlikely(prev_state == TASK_DEAD)) {
+              if (prev->sched_class->task_dead)
+                      prev->sched_class->task_dead(prev);
+
+              put_task_stack(prev);
+              put_task_struct_rcu_user(prev);
+      }
+
+      return rq;
+}
+
+---
+## 呼び出しフロー
+
+__schedule() [core.c:6929]
+    │
+    ▼
+context_switch(rq, prev, next, &rf)
+    │
+    ├─ prepare_task_switch()
+    │     ├─ kcov_prepare_switch()
+    │     ├─ sched_info_switch()
+    │     ├─ perf_event_task_sched_out()
+    │     ├─ rseq_preempt()
+    │     ├─ fire_sched_out_preempt_notifiers()
+    │     ├─ kmap_local_sched_out()
+    │     ├─ prepare_task()
+    │     └─ prepare_arch_switch()
+    │
+    ├─ arch_start_context_switch()
+    │
+    ├─ [メモリ空間切り替え]
+    │     ├─ next->mm == NULL (カーネルスレッドへ)
+    │     │     ├─ enter_lazy_tlb()
+    │     │     └─ mmgrab_lazy_tlb() (ユーザーからの場合)
+    │     │
+    │     └─ next->mm != NULL (ユーザープロセスへ)
+    │           ├─ membarrier_switch_mm()
+    │           ├─ switch_mm_irqs_off()  ← ページテーブル切り替え
+    │           └─ lru_gen_use_mm()
+    │
+    ├─ switch_mm_cid()
+    │
+    ├─ prepare_lock_switch()
+    │
+    ├─ switch_to(prev, next, prev)  ← レジスタ/スタック切り替え (アーキテクチャ依存)
+    │
+    ├─ barrier()
+    │
+    └─ finish_task_switch(prev)
+          ├─ vtime_task_switch()
+          ├─ perf_event_task_sched_in()
+          ├─ finish_task()
+          ├─ tick_nohz_task_switch()
+          ├─ finish_lock_switch()
+          ├─ finish_arch_post_lock_switch()
+          ├─ kcov_finish_switch()
+          ├─ kmap_local_sched_in()
+          ├─ fire_sched_in_preempt_notifiers()
+          ├─ mmdrop_lazy_tlb_sched() (必要な場合)
+          └─ [TASK_DEAD処理] (タスク終了時)
+
+## メモリ空間切り替えの4パターン
+
+| From   | To     | 処理                            |
+|--------|--------|-------------------------------|
+| kernel | kernel | lazy TLB + active_mm 転送       |
+| user   | kernel | lazy TLB + mmgrab_lazy_tlb()  |
+| kernel | user   | switch_mm + mmdrop_lazy_tlb() |
+| user   | user   | switch_mm                     |
 ```
 
 ---
