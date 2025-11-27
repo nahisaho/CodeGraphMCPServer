@@ -59,6 +59,33 @@ cd linux
 
 ## 1.3 Claude Code MCP設定
 
+### 方法1: CLIコマンドで追加（推奨）
+
+**stdio トランスポート（プロセス直接起動）:**
+
+```bash
+claude mcp add codegraph -- codegraph-mcp serve --repo /path/to/linux
+```
+
+**HTTP トランスポート（SSEサーバー経由）:**
+
+まず別ターミナルでSSEサーバーを起動：
+
+```bash
+cd /path/to/linux
+codegraph-mcp start --port 8080
+```
+
+次に Claude Code に追加：
+
+```bash
+claude mcp add --transport http codegraph http://0.0.0.0:8080
+```
+
+> **💡 ヒント**: HTTP トランスポートは複数のクライアントから同時接続でき、サーバーを起動したままインデックスを更新できます。
+
+### 方法2: 設定ファイルで追加
+
 Claude Codeの設定ファイル `~/.claude/claude_desktop_config.json` を編集：
 
 ```json
