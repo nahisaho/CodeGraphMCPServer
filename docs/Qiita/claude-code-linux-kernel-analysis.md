@@ -180,44 +180,70 @@ Linuxカーネルのスケジューラの主要な関数とその関係を教え
 **Claude Codeの回答:**
 
 ```
-CodeGraph MCPの query_codebase と find_dependencies を使用して分析しました。
+codegraphでLinuxカーネルのスケジューラに関する主要な関数を検索した結果をまとめます。
 
-## スケジューラの主要関数
+## Linuxカーネル スケジューラ関連関数 (codegraph検索結果)
 
-### コアスケジューリング
-1. **schedule()** - kernel/sched/core.c:6847
-   - メインのスケジューリングエントリポイント
-   - __schedule() を呼び出す
+### コアスケジューラ (kernel/sched/core.c)
 
-2. **__schedule()** - kernel/sched/core.c:6780
-   - 実際のコンテキストスイッチを実行
-   - pick_next_task() で次のタスクを選択
-   - context_switch() でCPUコンテキストを切り替え
+| 関数名                | 位置          | 説明               |
+|--------------------|-------------|------------------|
+| try_to_wake_up     | core.c:4143 | タスクを起床させる        |
+| enqueue_task       | core.c:2080 | タスクをランキューに追加     |
+| dequeue_task       | core.c:2106 | タスクをランキューから削除    |
+| pick_next_task     | core.c:5986 | 次に実行するタスクを選択     |
+| sched_core_enqueue | core.c:298  | コアスケジューリング用エンキュー |
+| sched_core_dequeue | core.c:311  | コアスケジューリング用デキュー  |
+| prio_less          | core.c:219  | 優先度比較            |
+| __task_prio        | core.c:191  | タスク優先度取得         |
 
-### タスク選択
-3. **pick_next_task()** - kernel/sched/core.c:5890
-   - スケジューリングクラスから次のタスクを選択
-   - CFS、RT、Deadlineなど複数のスケジューラを考慮
+### CFS (Completely Fair Scheduler) (kernel/sched/fair.c)
 
-### ウェイクアップ
-4. **wake_up_process()** - kernel/sched/core.c:4534
-   - スリープ中のプロセスを起床
-   - try_to_wake_up() を呼び出す
+| 関数名                     | 位置             | 説明            |
+|-------------------------|----------------|---------------|
+| enqueue_task_fair       | fair.c:6917    | CFSランキューへの追加  |
+| dequeue_task_fair       | fair.c:7161    | CFSランキューからの削除 |
+| calc_delta_fair         | fair.c:290     | 公平な実行時間の計算    |
+| update_load_add/sub/set | fair.c:165-177 | 負荷の更新         |
+| list_add_leaf_cfs_rq    | fair.c:310     | CFS rqリスト操作   |
 
-5. **try_to_wake_up()** - kernel/sched/core.c:4234
-   - タスクを実行可能状態にする
-   - 適切なCPUにタスクをキューイング
+### リアルタイムスケジューラ (kernel/sched/rt.c)
 
-## 呼び出し関係
+| 関数名                   | 位置        | 説明             |
+|-----------------------|-----------|----------------|
+| enqueue_task_rt       | rt.c:1430 | RTタスクの追加       |
+| dequeue_task_rt       | rt.c:1450 | RTタスクの削除       |
+| init_rt_rq            | rt.c:68   | RTランキューの初期化    |
+| sched_rt_period_timer | rt.c:101  | RTスケジューラ周期タイマー |
+| init_rt_bandwidth     | rt.c:125  | RT帯域幅の初期化      |
 
-schedule()
-└── __schedule()
-    ├── pick_next_task()
-    │   └── fair_sched_class.pick_next_task()  [CFS]
-    ├── context_switch()
-    │   ├── switch_mm()
-    │   └── switch_to()
-    └── update_rq_clock()
+### デッドラインスケジューラ (kernel/sched/deadline.c)
+
+| 関数名             | 位置              | 説明       |
+|-----------------|-----------------|----------|
+| enqueue_task_dl | deadline.c:2054 | DLタスクの追加 |
+| dequeue_task_dl | deadline.c:2114 | DLタスクの削除 |
+
+### sched_ext (BPF拡張スケジューラ) (kernel/sched/ext.c)
+
+| 関数名              | 位置         | 説明         |
+|------------------|------------|------------|
+| enqueue_task_scx | ext.c:1334 | SCXタスクの追加  |
+| dequeue_task_scx | ext.c:1430 | SCXタスクの削除  |
+| do_enqueue_task  | ext.c:1215 | タスクエンキュー実行 |
+
+### 統計・PSI (kernel/sched/stats.h)
+
+| 関数名                | 位置          | 説明            |
+|--------------------|-------------|---------------|
+| psi_enqueue        | stats.h:130 | PSIエンキュー処理    |
+| psi_dequeue        | stats.h:169 | PSIデキュー処理     |
+| psi_sched_switch   | stats.h:213 | PSIコンテキストスイッチ |
+| sched_info_arrive  | stats.h:263 | スケジュール情報到着    |
+| sched_info_enqueue | stats.h:289 | スケジュール情報エンキュー |
+
+より詳細な検索をするには:
+codegraph-mcp query "<キーワード>" --format text
 ```
 
 ## 3.3 分析例2: システムコールの実装を追跡
