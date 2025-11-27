@@ -31,7 +31,7 @@ CodeGraphMCPServer は、コードベースの構造を理解し、GraphRAG（Gr
 | 📚 **4 MCP Resources** | エンティティ、ファイル、コミュニティ、統計情報 |
 | 💬 **6 MCP Prompts** | コードレビュー、機能実装、デバッグ支援 |
 | ⚡ **高速インデックス** | 10万行を30秒以内、増分更新は2秒以内 |
-| 🌐 **多言語対応** | Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C++, HCL, Ruby をサポート |
+| 🌐 **多言語対応** | Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C, C++, HCL, Ruby をサポート（12言語） |
 
 ## 動作要件
 

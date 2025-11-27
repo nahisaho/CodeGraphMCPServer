@@ -27,7 +27,7 @@ from codegraph_mcp.languages.config import (
 
 class CppExtractor(BaseExtractor):
     """
-    C++-specific entity and relation extractor.
+    C/C++-specific entity and relation extractor.
 
     Extracts:
     - Classes (class)
@@ -43,7 +43,7 @@ class CppExtractor(BaseExtractor):
 
     config = LanguageConfig(
         name="cpp",
-        extensions=[".cpp", ".cc", ".cxx", ".hpp", ".h", ".hxx"],
+        extensions=[".c", ".cpp", ".cc", ".cxx", ".hpp", ".h", ".hxx"],
         tree_sitter_name="cpp",
         function_nodes=["function_definition"],
         class_nodes=["class_specifier", "struct_specifier"],

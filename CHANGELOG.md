@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2025-11-27
+
+### Added
+
+#### C Language Support
+- Added `.c` file extension support (pure C language)
+- C files are parsed using tree-sitter-cpp parser
+- Supported extensions: `.c`, `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp`, `.hxx`
+- Total supported languages: **12** (was 11)
+
+#### Qiita Article Metadata
+- Added Qiita frontmatter (tags, private, updated_at, etc.)
+
+### Changed
+- Updated cpp.py extractor docstring to "C/C++-specific"
+- Updated parser.py LANGUAGE_EXTENSIONS with C/C++ mappings
+
+---
+
 ## [0.7.0] - 2025-11-27
 
 ### Added

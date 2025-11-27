@@ -1,4 +1,10 @@
 title: ゼロ構成で動く！コードグラフ分析MCPサーバー「CodeGraph MCP」の紹介
+tags: MCP Python AI CodeAnalysis GraphRAG
+private: false
+updated_at: '2025-11-27'
+id: null
+organization_url_name: null
+slide: false
 
 # 第1章 はじめに
 
@@ -10,10 +16,10 @@ AIコーディングアシスタント（GitHub Copilot、Claude Desktop、Curso
 
 **主な特徴:**
 - ゼロ構成で即座に起動（外部DB不要）
-- 11言語対応（Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C++, HCL, Ruby）
+- 12言語対応（Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C, C++, HCL, Ruby）
 - GraphRAG機能によるコードベース全体の理解
 - 14種のMCPツール、4種のリソース、6種のプロンプト
-- **NEW (v0.7.0)**: ファイル監視による自動再インデックス、GitHub Actions CI/CD
+- **NEW (v0.7.1)**: C言語サポート追加（12言語対応）
 
 ## 1.2 対象読者
 
@@ -144,7 +150,7 @@ flowchart TB
         end
 
         subgraph Core["Core Engine"]
-            Parser["Tree-sitter AST Parser<br/>11 languages"]
+            Parser["Tree-sitter AST Parser<br/>12 languages"]
             Graph["NetworkX Graph Engine"]
             Community["Louvain Community Detection"]
             GraphRAG["GraphRAG Search<br/>global/local"]
@@ -247,7 +253,7 @@ global_search(query="このプロジェクトの主要なコンポーネント�
 ## 3.4 対応言語
 
 | 言語 | クラス | 関数 | メソッド | インターフェース |
-|------|--------|------|----------|-----------------|
+|------|--------|------|----------|------------------|
 | Python | ✅ | ✅ | ✅ | ✅ (Protocol) |
 | TypeScript | ✅ | ✅ | ✅ | ✅ |
 | JavaScript | ✅ | ✅ | ✅ | - |
@@ -256,6 +262,7 @@ global_search(query="このプロジェクトの主要なコンポーネント�
 | Java | ✅ | ✅ | ✅ | ✅ |
 | PHP | ✅ | ✅ | ✅ | ✅ |
 | C# | ✅ | - | ✅ | ✅ |
+| **C** | - | **✅** | - | - |
 | C++ | ✅ | ✅ | ✅ | - |
 | HCL (Terraform) | - | - | - | - |
 | Ruby | ✅ | ✅ | ✅ | - |
@@ -514,7 +521,7 @@ Coverage: 64%
 
 1. **ゼロ構成**: 外部DB不要、`pip install`で即座に利用開始
 2. **軽量・高速**: 10万行を30秒以内でインデックス
-3. **多言語対応**: 11言語をサポート
+3. **多言語対応**: 12言語をサポート
 4. **GraphRAG**: コードベース全体の理解を提供
 5. **MCP Native**: 14ツール、4リソース、6プロンプトの包括的実装
 6. **部分ID検索**: 関数名だけでエンティティを特定
@@ -527,7 +534,7 @@ Coverage: 64%
 
 - **GitHub**: https://github.com/nahisaho/CodeGraphMCPServer
 - **PyPI**: https://pypi.org/project/codegraph-mcp-server/
-- **バージョン**: v0.7.0 (2025-11-27)
+- **バージョン**: v0.7.1 (2025-11-27)
 
 ## 8.3 今後の展望
 

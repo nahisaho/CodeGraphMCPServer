@@ -164,6 +164,13 @@ class ASTParser:
         ".js": "javascript",
         ".jsx": "javascript",
         ".rs": "rust",
+        ".c": "cpp",
+        ".cpp": "cpp",
+        ".cc": "cpp",
+        ".cxx": "cpp",
+        ".h": "cpp",
+        ".hpp": "cpp",
+        ".hxx": "cpp",
     }
 
     def __init__(self) -> None:
@@ -177,6 +184,7 @@ class ASTParser:
             return
 
         try:
+            import tree_sitter_cpp
             import tree_sitter_python
             import tree_sitter_rust
             import tree_sitter_typescript
@@ -192,12 +200,15 @@ class ASTParser:
             self._parsers["rust"] = Parser(
                 Language(tree_sitter_rust.language())
             )
+            self._parsers["cpp"] = Parser(
+                Language(tree_sitter_cpp.language())
+            )
 
             self._initialized = True
         except ImportError as e:
             raise ImportError(
                 f"Tree-sitter language bindings not installed: {e}. "
-                "Install with: pip install tree-sitter-python tree-sitter-typescript tree-sitter-rust"
+                "Install with: pip install tree-sitter-python tree-sitter-typescript tree-sitter-rust tree-sitter-cpp"
             )
 
     def detect_language(self, file_path: Path) -> str | None:
