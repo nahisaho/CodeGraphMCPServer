@@ -21,6 +21,10 @@ AIコーディングアシスタント（GitHub Copilot、Claude Desktop、Curso
 - 大規模コードベースの理解・ナビゲーションに課題を感じる方
 - MCPサーバーの実装例を知りたい方
 
+## 1.3 動作確認環境
+
+> **注意**: 本プロジェクトはWSL2（Windows Subsystem for Linux 2）上でのみ動作確認を行っています。macOSやネイティブLinux環境での動作は未検証です。問題が発生した場合はGitHub Issuesでご報告ください。
+
 ---
 
 # 第2章 背景と課題
