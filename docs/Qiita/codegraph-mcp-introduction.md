@@ -156,7 +156,91 @@ flowchart TB
     Core --> Storage
 ```
 
-## 3.3 対応言語
+## 3.3 コミュニティ検出とは
+
+### コミュニティ検出の概要
+
+**コミュニティ検出**とは、コードグラフ内で密接に関連するエンティティ（関数、クラス、モジュール）を自動的にグループ化する技術です。CodeGraph MCPでは**Louvainアルゴリズム**を使用しています。
+
+```mermaid
+graph LR
+    subgraph Community1["認証コミュニティ"]
+        Auth["AuthService"]
+        Login["LoginController"]
+        Token["TokenManager"]
+    end
+
+    subgraph Community2["ユーザー管理コミュニティ"]
+        User["UserService"]
+        Profile["ProfileController"]
+        Repo["UserRepository"]
+    end
+
+    subgraph Community3["データベースコミュニティ"]
+        DB["DatabaseConnection"]
+        Query["QueryBuilder"]
+        Migration["MigrationRunner"]
+    end
+
+    Auth --> Token
+    Login --> Auth
+    User --> Repo
+    Profile --> User
+    Repo --> DB
+    Query --> DB
+```
+
+### なぜコミュニティ検出が重要か
+
+| 用途 | 説明 |
+|------|------|
+| **アーキテクチャ理解** | プロジェクトの論理的な構造を自動で把握 |
+| **影響範囲分析** | 変更がどのコミュニティに影響するか特定 |
+| **オンボーディング** | 新メンバーがコードベースを素早く理解 |
+| **リファクタリング** | モジュール境界の改善ポイントを発見 |
+
+### コミュニティ検出の仕組み
+
+1. **グラフ構築**: コードエンティティ間の関係（呼び出し、依存、継承）をグラフ化
+2. **Louvainアルゴリズム**: モジュラリティを最大化するようにノードをクラスタリング
+3. **階層構造**: 複数レベルのコミュニティを検出（細粒度〜粗粒度）
+4. **サマリー生成**: 各コミュニティの役割をLLMで要約（オプション）
+
+### 実行例
+
+```bash
+# コミュニティ検出付きでインデックス（デフォルト）
+codegraph-mcp index /path/to/project --full
+
+# 出力例
+Indexed 230,796 entities, 651,140 relations
+Detected 456 communities in 3 levels
+```
+
+```bash
+# コミュニティ検出をスキップ（高速化）
+codegraph-mcp index /path/to/project --full --no-community
+```
+
+### GraphRAGとの連携
+
+コミュニティ検出はGraphRAG機能の基盤となります。
+
+- **global_search**: コミュニティサマリーを活用してコードベース全体を理解
+- **local_search**: 特定エンティティが属するコミュニティ内で関連情報を検索
+
+```python
+# コミュニティを活用したグローバル検索
+global_search(query="このプロジェクトの主要なコンポーネントは？")
+
+# 結果例:
+# このプロジェクトは以下の主要コミュニティで構成されています:
+# 1. 認証コミュニティ (23エンティティ): ユーザー認証とトークン管理
+# 2. API コミュニティ (45エンティティ): RESTエンドポイントとリクエスト処理
+# 3. データ層コミュニティ (31エンティティ): データベースアクセスとORM
+```
+
+## 3.4 対応言語
 
 | 言語 | クラス | 関数 | メソッド | インターフェース |
 |------|--------|------|----------|-----------------|

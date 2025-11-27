@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-11-27
+
+### Added
+
+#### File Watching (`watch` command)
+- **`codegraph-mcp watch`**: Watch repository and auto-reindex on file changes
+  - Real-time file monitoring with configurable debounce
+  - `--debounce` option for delay between changes (default: 1.0s)
+  - `--community` flag to run community detection after each reindex
+  - Filters to supported language files only
+  - Graceful shutdown with Ctrl+C
+
+#### GitHub Actions CI/CD
+- **CI Workflow** (`.github/workflows/ci.yml`):
+  - Runs on push/PR to main branch
+  - Tests on Python 3.11 and 3.12
+  - Linting with ruff, type checking with mypy
+  - Coverage reporting to Codecov
+  - Build verification
+- **Release Workflow** (`.github/workflows/release.yml`):
+  - Triggers on version tags (v*)
+  - Runs tests before release
+  - Creates GitHub Release with artifacts
+  - Auto-publishes to PyPI
+
+### Tests
+- Added 8 new CLI tests for watch command
+- Total: 308 passed, 1 skipped
+
+---
+
 ## [0.6.2] - 2025-11-27
 
 ### Added

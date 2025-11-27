@@ -7,6 +7,7 @@ Usage:
     codegraph-mcp status                            # Check server status
     codegraph-mcp serve --repo /path/to/project    # Start server in foreground
     codegraph-mcp index /path/to/project           # Index repository
+    codegraph-mcp watch /path/to/project           # Watch and auto-reindex
     codegraph-mcp query "find all functions"       # Execute query
     codegraph-mcp stats /path/to/project           # Show statistics
     codegraph-mcp --help
@@ -199,6 +200,31 @@ def create_parser() -> argparse.ArgumentParser:
         type=int,
         default=3,
         help="Minimum community size (default: 3)",
+    )
+
+    # watch command - File watching for auto-reindex
+    watch_parser = subparsers.add_parser(
+        "watch",
+        help="Watch repository and auto-reindex on changes",
+    )
+    watch_parser.add_argument(
+        "path",
+        type=Path,
+        nargs="?",
+        default=Path.cwd(),
+        help="Repository path to watch (default: current directory)",
+    )
+    watch_parser.add_argument(
+        "--debounce",
+        type=float,
+        default=1.0,
+        help="Debounce delay in seconds (default: 1.0)",
+    )
+    watch_parser.add_argument(
+        "--community",
+        action="store_true",
+        default=False,
+        help="Run community detection after each reindex",
     )
 
     return parser
@@ -649,6 +675,140 @@ def cmd_community(args: argparse.Namespace) -> int:
     return asyncio.run(_community())
 
 
+def cmd_watch(args: argparse.Namespace) -> int:
+    """Handle watch command - Watch for file changes and auto-reindex."""
+    import asyncio
+    import time
+
+    try:
+        from watchfiles import awatch, Change
+    except ImportError:
+        print("Error: watchfiles is required for watch command")
+        print("Install with: pip install watchfiles")
+        return 1
+
+    from codegraph_mcp.core.indexer import Indexer
+    from codegraph_mcp.languages.config import LANGUAGE_CONFIG
+
+    # Build set of supported extensions
+    supported_extensions = set()
+    for lang_config in LANGUAGE_CONFIG.values():
+        supported_extensions.update(lang_config.extensions)
+
+    async def _watch() -> int:
+        indexer = Indexer()
+        repo_path = args.path.resolve()
+
+        print(f"\n[Watch Mode] Watching: {repo_path}")
+        print(f"[Watch Mode] Debounce: {args.debounce}s")
+        print(f"[Watch Mode] Community detection: {args.community}")
+        print("[Watch Mode] Press Ctrl+C to stop\n")
+
+        # Initial index
+        print("[Watch Mode] Running initial index...")
+        result = await indexer.index_repository(repo_path, incremental=False)
+        print(
+            f"[Watch Mode] Initial: {result.entities_count} entities, "
+            f"{result.relations_count} relations"
+        )
+
+        # Track pending changes for debouncing
+        pending_files: set[Path] = set()
+        last_change_time = 0.0
+
+        async def process_changes():
+            """Process accumulated changes after debounce."""
+            nonlocal pending_files, last_change_time
+
+            if not pending_files:
+                return
+
+            # Filter to supported files
+            files_to_index = [
+                f for f in pending_files
+                if f.suffix in supported_extensions and f.exists()
+            ]
+
+            if not files_to_index:
+                pending_files.clear()
+                return
+
+            print(f"\n[Watch Mode] Reindexing {len(files_to_index)} files...")
+            start = time.time()
+
+            result = await indexer.index_repository(
+                repo_path,
+                incremental=True,
+            )
+
+            elapsed = time.time() - start
+            print(
+                f"[Watch Mode] Done: {result.entities_count} entities, "
+                f"{result.relations_count} relations ({elapsed:.2f}s)"
+            )
+
+            # Run community detection if enabled
+            if args.community and result.success:
+                from codegraph_mcp.core.graph import GraphEngine
+                from codegraph_mcp.core.community import CommunityDetector
+
+                engine = GraphEngine(repo_path)
+                await engine.initialize()
+                try:
+                    detector = CommunityDetector()
+                    if result.changed_entity_ids:
+                        comm_result = await detector.update_incremental(
+                            engine, result.changed_entity_ids
+                        )
+                        print(
+                            f"[Watch Mode] Communities updated: "
+                            f"{len(comm_result.communities)}"
+                        )
+                finally:
+                    await engine.close()
+
+            pending_files.clear()
+
+        try:
+            async for changes in awatch(
+                repo_path,
+                debounce=int(args.debounce * 1000),
+                recursive=True,
+            ):
+                for change_type, file_path in changes:
+                    path = Path(file_path)
+
+                    # Skip non-code files and hidden files
+                    if path.suffix not in supported_extensions:
+                        continue
+                    if any(part.startswith('.') for part in path.parts):
+                        continue
+
+                    # Log change
+                    change_name = {
+                        Change.added: "Added",
+                        Change.modified: "Modified",
+                        Change.deleted: "Deleted",
+                    }.get(change_type, "Changed")
+
+                    rel_path = path.relative_to(repo_path)
+                    print(f"[Watch Mode] {change_name}: {rel_path}")
+
+                    if change_type != Change.deleted:
+                        pending_files.add(path)
+
+                    last_change_time = time.time()
+
+                # Process after debounce
+                await process_changes()
+
+        except KeyboardInterrupt:
+            print("\n[Watch Mode] Stopped")
+            return 0
+
+    return asyncio.run(_watch())
+
+
 def main() -> int:
     """Main entry point."""
     parser = create_parser()
@@ -664,6 +824,7 @@ def main() -> int:
         "status": cmd_status,
         "serve": cmd_serve,
         "index": cmd_index,
+        "watch": cmd_watch,
         "query": cmd_query,
         "stats": cmd_stats,
         "community": cmd_community,

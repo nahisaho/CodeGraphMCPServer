@@ -5,7 +5,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-1.0-green.svg)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-300%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-308%20passed-brightgreen.svg)]()
+[![CI](https://github.com/nahisaho/CodeGraphMCPServer/actions/workflows/ci.yml/badge.svg)](https://github.com/nahisaho/CodeGraphMCPServer/actions/workflows/ci.yml)
 
 ## 概要
 
@@ -64,6 +65,9 @@ codegraph-mcp index /path/to/repository --full
 
 # 増分インデックス（デフォルト）
 codegraph-mcp index /path/to/repository
+
+# ファイル監視で自動再インデックス
+codegraph-mcp watch /path/to/repository
 ```
 
 **出力例:**
