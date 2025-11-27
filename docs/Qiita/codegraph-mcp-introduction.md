@@ -124,17 +124,11 @@ codegraph-mcp index /path/to/your/project --full
 # コミュニティ検出をスキップ（大規模リポジトリ向け）
 codegraph-mcp index /path/to/your/project --full --no-community
 
-# サーバー起動（バックグラウンド）
-codegraph-mcp start --repo /path/to/your/project
-
-# サーバー状態確認
-codegraph-mcp status
-
-# サーバー停止
-codegraph-mcp stop
-
 # ソースコード変更後は増分インデックスで更新
 codegraph-mcp index /path/to/your/project
+
+# 統計情報を確認
+codegraph-mcp stats /path/to/your/project
 ```
 
 外部データベース不要。SQLiteによる組み込みグラフエンジンで動作します。増分インデックスはGit差分を活用し、変更ファイルのみを再インデックスするため高速です。
@@ -373,19 +367,23 @@ Indexed 16 entities, 37 relations in 0.81s
 
 ### ステップ3: MCPサーバー起動
 
+MCPサーバーはクライアント（VS Code、Claude Desktop等）が自動的に起動します。手動で起動する必要はありません。
+
 ```bash
-# バックグラウンドで起動
+# デバッグ用: フォアグラウンドで起動
+codegraph-mcp serve --repo /path/to/your/project
+
+# SSEモード（HTTPサーバー）でバックグラウンド起動
 codegraph-mcp start --repo /path/to/your/project
 
-# 状態確認
+# SSEモードの状態確認
 codegraph-mcp status
 
-# 停止
+# SSEモードの停止
 codegraph-mcp stop
-
-# フォアグラウンドで起動（デバッグ用）
-codegraph-mcp serve --repo /path/to/your/project
 ```
+
+> **注意**: `start`/`stop`/`status` コマンドはSSEトランスポート（HTTPサーバー）用です。通常のMCPクライアント連携では、設定ファイルに記載するだけでクライアントが自動起動します。
 
 ## 5.2 MCPクライアント設定
 

@@ -127,20 +127,26 @@ codegraph-mcp index . --full --no-community
 
 ---
 
-# 第3章 MCPサーバーの起動
+# 第3章 MCPサーバーの設定
 
-```bash
-# バックグラウンドで起動
-codegraph-mcp start --repo /path/to/linux
+MCPサーバーはクライアント（VS Code、Claude Desktop等）が自動的に起動します。手動で起動する必要はありません。
 
-# 状態確認
-codegraph-mcp status
+VS Codeの設定（`.vscode/settings.json`）：
 
-# 停止する場合
-codegraph-mcp stop
+```json
+{
+  "mcp.servers": {
+    "codegraph": {
+      "command": "codegraph-mcp",
+      "args": ["serve", "--repo", "${workspaceFolder}"]
+    }
+  }
+}
 ```
 
 VS Codeを開き、GitHub Copilotが利用可能な状態にします。
+
+> **デバッグ用**: 手動でサーバーを起動する場合は `codegraph-mcp serve --repo /path/to/linux` を使用します。
 
 ---
 
