@@ -30,17 +30,18 @@ class TestPHPExtractor:
             import tree_sitter_php as ts_php
         except ImportError:
             pytest.skip("tree-sitter-php not installed")
-        
-        from codegraph_mcp.languages.php import PHPExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.php import PHPExtractor
+
         # Initialize parser
         php_lang = ts.Language(ts_php.language_php())
         parser = ts.Parser(php_lang)
-        
+
         # Parse source
         tree = parser.parse(php_source.encode())
-        
+
         # Extract entities
         extractor = PHPExtractor()
         return extractor.extract(tree, PHP_FIXTURE_PATH, php_source)
@@ -54,7 +55,7 @@ class TestPHPExtractor:
         """Test class extraction."""
         classes = [e for e in parse_result.entities if e.type == EntityType.CLASS]
         class_names = {c.name for c in classes}
-        
+
         assert "Calculator" in class_names
         assert "AdvancedCalculator" in class_names
 
@@ -62,21 +63,21 @@ class TestPHPExtractor:
         """Test interface extraction."""
         interfaces = [e for e in parse_result.entities if e.type == EntityType.INTERFACE]
         interface_names = {i.name for i in interfaces}
-        
+
         assert "CalculatorInterface" in interface_names
 
     def test_trait_extraction(self, parse_result):
         """Test trait extraction."""
         traits = [e for e in parse_result.entities if e.type == EntityType.TRAIT]
         trait_names = {t.name for t in traits}
-        
+
         assert "Loggable" in trait_names
 
     def test_method_extraction(self, parse_result):
         """Test method extraction."""
         methods = [e for e in parse_result.entities if e.type == EntityType.METHOD]
         method_names = {m.name for m in methods}
-        
+
         assert "add" in method_names
         assert "subtract" in method_names
         assert "multiply" in method_names
@@ -86,20 +87,20 @@ class TestPHPExtractor:
         """Test function extraction."""
         functions = [e for e in parse_result.entities if e.type == EntityType.FUNCTION]
         func_names = {f.name for f in functions}
-        
+
         assert "createCalculator" in func_names
 
     def test_inheritance_relations(self, parse_result):
         """Test inheritance relation extraction."""
         inherits = [r for r in parse_result.relations if r.type == RelationType.INHERITS]
-        
+
         # AdvancedCalculator extends Calculator
         assert any("Calculator" in r.target_id for r in inherits)
 
     def test_implements_relations(self, parse_result):
         """Test implements relation extraction."""
         implements = [r for r in parse_result.relations if r.type == RelationType.IMPLEMENTS]
-        
+
         # Calculator implements CalculatorInterface
         assert any("CalculatorInterface" in r.target_id for r in implements)
 
@@ -125,19 +126,20 @@ class TestPHPExtractorEdgeCases:
             import tree_sitter_php as ts_php
         except ImportError:
             pytest.skip("tree-sitter-php not installed")
-        
-        from codegraph_mcp.languages.php import PHPExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.php import PHPExtractor
+
         php_lang = ts.Language(ts_php.language_php())
         parser = ts.Parser(php_lang)
-        
+
         source = "<?php\n"
         tree = parser.parse(source.encode())
-        
+
         extractor = PHPExtractor()
         result = extractor.extract(tree, Path("empty.php"), source)
-        
+
         # Should have module entity
         assert len(result.entities) >= 1
 
@@ -147,13 +149,14 @@ class TestPHPExtractorEdgeCases:
             import tree_sitter_php as ts_php
         except ImportError:
             pytest.skip("tree-sitter-php not installed")
-        
-        from codegraph_mcp.languages.php import PHPExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.php import PHPExtractor
+
         php_lang = ts.Language(ts_php.language_php())
         parser = ts.Parser(php_lang)
-        
+
         source = '''<?php
 class HelloWorld {
     public function greet() {
@@ -162,10 +165,10 @@ class HelloWorld {
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = PHPExtractor()
         result = extractor.extract(tree, Path("hello.php"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
         assert classes[0].name == "HelloWorld"
@@ -176,13 +179,14 @@ class HelloWorld {
             import tree_sitter_php as ts_php
         except ImportError:
             pytest.skip("tree-sitter-php not installed")
-        
-        from codegraph_mcp.languages.php import PHPExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.php import PHPExtractor
+
         php_lang = ts.Language(ts_php.language_php())
         parser = ts.Parser(php_lang)
-        
+
         source = '''<?php
 namespace App\\Models;
 
@@ -191,10 +195,10 @@ class User {
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = PHPExtractor()
         result = extractor.extract(tree, Path("User.php"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
         assert classes[0].name == "User"
@@ -205,27 +209,28 @@ class User {
             import tree_sitter_php as ts_php
         except ImportError:
             pytest.skip("tree-sitter-php not installed")
-        
-        from codegraph_mcp.languages.php import PHPExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.php import PHPExtractor
+
         php_lang = ts.Language(ts_php.language_php())
         parser = ts.Parser(php_lang)
-        
+
         source = '''<?php
 abstract class BaseController {
     abstract public function handle();
-    
+
     public function respond() {
         return "OK";
     }
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = PHPExtractor()
         result = extractor.extract(tree, Path("base.php"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
         assert classes[0].name == "BaseController"
@@ -236,13 +241,14 @@ abstract class BaseController {
             import tree_sitter_php as ts_php
         except ImportError:
             pytest.skip("tree-sitter-php not installed")
-        
-        from codegraph_mcp.languages.php import PHPExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.php import PHPExtractor
+
         php_lang = ts.Language(ts_php.language_php())
         parser = ts.Parser(php_lang)
-        
+
         source = '''<?php
 class Factory {
     public static function create(): self {
@@ -251,10 +257,10 @@ class Factory {
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = PHPExtractor()
         result = extractor.extract(tree, Path("factory.php"), source)
-        
+
         methods = [e for e in result.entities if e.type == EntityType.METHOD]
         assert len(methods) == 1
         assert methods[0].name == "create"

@@ -28,7 +28,7 @@ from codegraph_mcp.languages.config import (
 class PHPExtractor(BaseExtractor):
     """
     PHP-specific entity and relation extractor.
-    
+
     Extracts:
     - Classes (class)
     - Functions (function)
@@ -37,10 +37,10 @@ class PHPExtractor(BaseExtractor):
     - Traits (trait)
     - Namespaces (namespace)
     - Use statements (imports)
-    
+
     Requirements: REQ-AST-005
     """
-    
+
     config = LanguageConfig(
         name="php",
         extensions=[".php"],
@@ -50,7 +50,7 @@ class PHPExtractor(BaseExtractor):
         import_nodes=["namespace_use_declaration"],
         interface_nodes=["interface_declaration"],
     )
-    
+
     def extract(
         self,
         tree: Any,
@@ -60,12 +60,12 @@ class PHPExtractor(BaseExtractor):
         """Extract entities and relations from PHP AST."""
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         # Extract namespace for module entity
         namespace = self._extract_namespace(tree.root_node, source_code)
         module_name = namespace or file_path.stem
         module_id = self._generate_entity_id(file_path, module_name, 1)
-        
+
         entities.append(Entity(
             id=module_id,
             type=EntityType.MODULE,
@@ -79,7 +79,7 @@ class PHPExtractor(BaseExtractor):
                 end_column=0,
             ),
         ))
-        
+
         # Walk the tree
         self._walk_tree(
             tree.root_node,
@@ -90,9 +90,9 @@ class PHPExtractor(BaseExtractor):
             module_id,
             namespace,
         )
-        
+
         return ParseResult(entities=entities, relations=relations)
-    
+
     def _extract_namespace(self, root_node: Any, source_code: str) -> str | None:
         """Extract namespace from AST."""
         for child in root_node.children:
@@ -103,7 +103,7 @@ class PHPExtractor(BaseExtractor):
                     if ns_child.type == "namespace_name":
                         return self._get_node_text(ns_child, source_code)
         return None
-    
+
     def _walk_tree(
         self,
         node: Any,
@@ -115,7 +115,7 @@ class PHPExtractor(BaseExtractor):
         namespace: str | None,
     ) -> None:
         """Recursively walk the AST tree."""
-        
+
         if node.type == "function_definition":
             entity = self._extract_function(node, file_path, source_code, namespace)
             if entity:
@@ -126,7 +126,7 @@ class PHPExtractor(BaseExtractor):
                     type=RelationType.CONTAINS,
                 ))
                 self._extract_calls(node, file_path, source_code, entity.id, relations)
-        
+
         elif node.type == "class_declaration":
             entity = self._extract_class(node, file_path, source_code, namespace)
             if entity:
@@ -142,7 +142,7 @@ class PHPExtractor(BaseExtractor):
                 self._extract_class_members(
                     node, file_path, source_code, entities, relations, entity.id, namespace
                 )
-        
+
         elif node.type == "interface_declaration":
             entity = self._extract_interface(node, file_path, source_code, namespace)
             if entity:
@@ -153,7 +153,7 @@ class PHPExtractor(BaseExtractor):
                     type=RelationType.CONTAINS,
                 ))
                 self._extract_interface_extends(node, source_code, entity.id, relations)
-        
+
         elif node.type == "trait_declaration":
             entity = self._extract_trait(node, file_path, source_code, namespace)
             if entity:
@@ -167,10 +167,10 @@ class PHPExtractor(BaseExtractor):
                 self._extract_class_members(
                     node, file_path, source_code, entities, relations, entity.id, namespace
                 )
-        
+
         elif node.type == "namespace_use_declaration":
             self._extract_use_statement(node, source_code, parent_id, relations)
-        
+
         # Recurse into children (but not into class bodies - handled separately)
         if node.type not in ("class_declaration", "interface_declaration", "trait_declaration"):
             for child in node.children:
@@ -178,7 +178,7 @@ class PHPExtractor(BaseExtractor):
                     child, file_path, source_code,
                     entities, relations, parent_id, namespace,
                 )
-    
+
     def _extract_function(
         self,
         node: Any,
@@ -192,18 +192,18 @@ class PHPExtractor(BaseExtractor):
             if child.type == "name":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         if namespace:
             qualified_name = f"{file_path}::{namespace}\\{name}"
         else:
             qualified_name = f"{file_path}::{name}"
-        
+
         signature = self._extract_function_signature(node, name, source_code)
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.FUNCTION,
@@ -220,7 +220,7 @@ class PHPExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_class(
         self,
         node: Any,
@@ -234,17 +234,17 @@ class PHPExtractor(BaseExtractor):
             if child.type == "name":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         if namespace:
             qualified_name = f"{file_path}::{namespace}\\{name}"
         else:
             qualified_name = f"{file_path}::{name}"
-        
+
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.CLASS,
@@ -260,7 +260,7 @@ class PHPExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_interface(
         self,
         node: Any,
@@ -274,17 +274,17 @@ class PHPExtractor(BaseExtractor):
             if child.type == "name":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         if namespace:
             qualified_name = f"{file_path}::{namespace}\\{name}"
         else:
             qualified_name = f"{file_path}::{name}"
-        
+
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.INTERFACE,
@@ -300,7 +300,7 @@ class PHPExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_trait(
         self,
         node: Any,
@@ -314,17 +314,17 @@ class PHPExtractor(BaseExtractor):
             if child.type == "name":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         if namespace:
             qualified_name = f"{file_path}::{namespace}\\{name}"
         else:
             qualified_name = f"{file_path}::{name}"
-        
+
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.TRAIT,
@@ -340,7 +340,7 @@ class PHPExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_class_members(
         self,
         node: Any,
@@ -365,7 +365,7 @@ class PHPExtractor(BaseExtractor):
                                 type=RelationType.CONTAINS,
                             ))
                             self._extract_calls(member, file_path, source_code, entity.id, relations)
-    
+
     def _extract_method(
         self,
         node: Any,
@@ -379,14 +379,14 @@ class PHPExtractor(BaseExtractor):
             if child.type == "name":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{name}"
         signature = self._extract_method_signature(node, name, source_code)
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.METHOD,
@@ -403,7 +403,7 @@ class PHPExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_inheritance(
         self,
         node: Any,
@@ -433,7 +433,7 @@ class PHPExtractor(BaseExtractor):
                             target_id=f"unresolved::{interface_name}",
                             type=RelationType.IMPLEMENTS,
                         ))
-    
+
     def _extract_interface_extends(
         self,
         node: Any,
@@ -452,7 +452,7 @@ class PHPExtractor(BaseExtractor):
                             target_id=f"unresolved::{parent_interface}",
                             type=RelationType.INHERITS,
                         ))
-    
+
     def _extract_use_statement(
         self,
         node: Any,
@@ -471,7 +471,7 @@ class PHPExtractor(BaseExtractor):
                             target_id=f"module::{import_name}",
                             type=RelationType.IMPORTS,
                         ))
-    
+
     def _extract_calls(
         self,
         node: Any,
@@ -491,7 +491,7 @@ class PHPExtractor(BaseExtractor):
                         type=RelationType.CALLS,
                     ))
                     break
-        
+
         elif node.type == "member_call_expression":
             for child in node.children:
                 if child.type == "name":
@@ -502,7 +502,7 @@ class PHPExtractor(BaseExtractor):
                         type=RelationType.CALLS,
                     ))
                     break
-        
+
         elif node.type == "scoped_call_expression":
             # Static method call
             for child in node.children:
@@ -514,10 +514,10 @@ class PHPExtractor(BaseExtractor):
                         type=RelationType.CALLS,
                     ))
                     break
-        
+
         for child in node.children:
             self._extract_calls(child, file_path, source_code, caller_id, relations)
-    
+
     def _extract_function_signature(
         self,
         node: Any,
@@ -527,15 +527,15 @@ class PHPExtractor(BaseExtractor):
         """Extract function signature."""
         params = ""
         return_type = ""
-        
+
         for child in node.children:
             if child.type == "formal_parameters":
                 params = self._get_node_text(child, source_code)
             elif child.type in ("type", "union_type", "named_type"):
                 return_type = ": " + self._get_node_text(child, source_code)
-        
+
         return f"function {name}{params}{return_type}"
-    
+
     def _extract_method_signature(
         self,
         node: Any,
@@ -546,7 +546,7 @@ class PHPExtractor(BaseExtractor):
         params = ""
         return_type = ""
         visibility = "public"
-        
+
         for child in node.children:
             if child.type == "formal_parameters":
                 params = self._get_node_text(child, source_code)
@@ -554,9 +554,9 @@ class PHPExtractor(BaseExtractor):
                 return_type = ": " + self._get_node_text(child, source_code)
             elif child.type == "visibility_modifier":
                 visibility = self._get_node_text(child, source_code)
-        
+
         return f"{visibility} function {name}{params}{return_type}"
-    
+
     def _extract_doc_comment(self, node: Any, source_code: str) -> str | None:
         """Extract PHPDoc comment."""
         # Look for comment node before this node

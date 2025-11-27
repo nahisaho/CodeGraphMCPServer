@@ -7,7 +7,6 @@ End-to-End Scenario Tests
 実際のMCPサーバーを起動し、クライアント経由でテストします。
 """
 
-import asyncio
 import subprocess
 import sys
 from pathlib import Path
@@ -156,10 +155,10 @@ class TestCalculator:
 ''')
 
     # Git commit
-    subprocess.run(["git", "add", "."], cwd=repo_path, capture_output=True)
+    subprocess.run(["git", "add", "."], check=False, cwd=repo_path, capture_output=True)
     subprocess.run(
         ["git", "commit", "-m", "Initial commit"],
-        cwd=repo_path,
+        check=False, cwd=repo_path,
         capture_output=True,
     )
 
@@ -197,10 +196,10 @@ class APIClient {
 export { APIClient, CalculatorResult };
 ''')
 
-    subprocess.run(["git", "add", "."], cwd=repo_path, capture_output=True)
+    subprocess.run(["git", "add", "."], check=False, cwd=repo_path, capture_output=True)
     subprocess.run(
         ["git", "commit", "-m", "Add TypeScript files"],
-        cwd=repo_path,
+        check=False, cwd=repo_path,
         capture_output=True,
     )
 
@@ -222,8 +221,8 @@ class TestCodebaseAnalysisScenario:
         2. indexerでインデックス
         3. GraphEngineでクエリ
         """
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine, GraphQuery
+        from codegraph_mcp.core.indexer import Indexer
 
         # 1. サンプルプロジェクトを作成
         create_sample_project(temp_repo)
@@ -257,8 +256,8 @@ class TestCodebaseAnalysisScenario:
         1. サンプルコードをインデックス
         2. エンティティ間の関係を検索
         """
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine, GraphQuery
+        from codegraph_mcp.core.indexer import Indexer
 
         # 1. サンプルプロジェクトを作成
         create_sample_project(temp_repo)
@@ -294,8 +293,8 @@ class TestCodebaseAnalysisScenario:
         1. インデックスを作成
         2. モジュールの依存関係を取得
         """
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine, GraphQuery
+        from codegraph_mcp.core.indexer import Indexer
 
         create_sample_project(temp_repo)
 
@@ -334,8 +333,8 @@ class TestIncrementalUpdateScenario:
         3. インクリメンタル更新
         4. 更新されたグラフを検証
         """
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine, GraphQuery
+        from codegraph_mcp.core.indexer import Indexer
 
         # 1. 初期プロジェクトを作成してインデックス
         create_sample_project(temp_repo)
@@ -365,10 +364,10 @@ class AdvancedCalculator(Calculator):
         return value ** 0.5
 ''')
 
-        subprocess.run(["git", "add", "."], cwd=temp_repo, capture_output=True)
+        subprocess.run(["git", "add", "."], check=False, cwd=temp_repo, capture_output=True)
         subprocess.run(
             ["git", "commit", "-m", "Add advanced calculator"],
-            cwd=temp_repo,
+            check=False, cwd=temp_repo,
             capture_output=True,
         )
 
@@ -405,8 +404,8 @@ class TestMultiLanguageScenario:
         2. 両言語をインデックス
         3. 両言語のエンティティが検出されることを確認
         """
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine, GraphQuery
+        from codegraph_mcp.core.indexer import Indexer
 
         # 1. Python + TypeScript プロジェクトを作成
         create_sample_project(temp_repo)
@@ -449,7 +448,7 @@ class TestCLIScenario:
         # CLIを実行
         result = subprocess.run(
             [sys.executable, "-m", "codegraph_mcp", "index", str(temp_repo), "--full"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
         )
 
@@ -466,13 +465,13 @@ class TestCLIScenario:
         # まずインデックスを作成
         subprocess.run(
             [sys.executable, "-m", "codegraph_mcp", "index", str(temp_repo), "--full"],
-            capture_output=True,
+            check=False, capture_output=True,
         )
 
         # 統計情報を取得
         result = subprocess.run(
             [sys.executable, "-m", "codegraph_mcp", "stats", str(temp_repo)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
         )
 
@@ -489,13 +488,13 @@ class TestCLIScenario:
         # インデックスを作成
         subprocess.run(
             [sys.executable, "-m", "codegraph_mcp", "index", str(temp_repo), "--full"],
-            capture_output=True,
+            check=False, capture_output=True,
         )
 
         # クエリを実行
         result = subprocess.run(
             [sys.executable, "-m", "codegraph_mcp", "query", "Calculator", "--repo", str(temp_repo)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
         )
 
@@ -513,8 +512,8 @@ class TestStatisticsScenario:
         """
         シナリオ: 包括的な統計情報を取得する
         """
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine
+        from codegraph_mcp.core.indexer import Indexer
 
         create_sample_project(temp_repo)
 

@@ -340,8 +340,9 @@ class TestPromptRegistration:
 
     def test_register_prompts(self, config: Config):
         """Test registering prompts with server."""
-        from codegraph_mcp.mcp.prompts import register
         from mcp.server import Server
+
+        from codegraph_mcp.mcp.prompts import register
 
         server = Server("test")
         register(server, config)

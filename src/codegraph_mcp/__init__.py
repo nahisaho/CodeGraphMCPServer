@@ -8,12 +8,13 @@ and community detection.
 Architecture: Library-First (ADR-001)
 """
 
+from codegraph_mcp.config import Config
+
+
 __version__ = "0.7.0"
 __author__ = "CodeGraph Team"
 
-from codegraph_mcp.config import Config
-
 __all__ = [
-    "__version__",
     "Config",
+    "__version__",
 ]

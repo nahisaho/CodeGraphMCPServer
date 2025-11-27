@@ -5,16 +5,16 @@ Tests: TASK-036, TASK-037, TASK-038
 Requirements: REQ-SEM-001, REQ-SEM-002
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from codegraph_mcp.core.llm import (
+    LLMClient,
     LLMConfig,
     LLMResponse,
     RuleBasedProvider,
-    LLMClient,
 )
 from codegraph_mcp.core.parser import Entity, EntityType, Location
 
@@ -118,7 +118,7 @@ class TestLLMClient:
     async def test_complete_with_fallback(self):
         """Test completion with rule-based fallback."""
         client = LLMClient(fallback_to_rules=True)
-        
+
         result = await client.complete("What is this code?")
         assert len(result) > 0
 
@@ -126,7 +126,7 @@ class TestLLMClient:
     async def test_generate_entity_description(self):
         """Test entity description generation."""
         client = LLMClient(fallback_to_rules=True)
-        
+
         location = Location(
             file_path=Path("src/module.py"),
             start_line=1,
@@ -144,7 +144,7 @@ class TestLLMClient:
             docstring="Calculate the total price of items.",
             source_code="def calculate_total(items): return sum(items)",
         )
-        
+
         description = await client.generate_entity_description(entity)
         assert len(description) > 0
 
@@ -154,14 +154,14 @@ class TestLLMClient:
         from codegraph_mcp.core.community import Community
 
         client = LLMClient(fallback_to_rules=True)
-        
+
         community = Community(
             id=1,
             level=0,
             name="Data Processing",
             member_ids=["func1", "func2", "class1"],
         )
-        
+
         location = Location(
             file_path=Path("src/module.py"),
             start_line=1,
@@ -185,7 +185,7 @@ class TestLLMClient:
                 location=location,
             ),
         ]
-        
+
         summary = await client.generate_community_summary(community, entities)
         assert len(summary) > 0
 
@@ -193,7 +193,7 @@ class TestLLMClient:
     async def test_answer_code_question(self):
         """Test code question answering."""
         client = LLMClient(fallback_to_rules=True)
-        
+
         location = Location(
             file_path=Path("src/auth.py"),
             start_line=1,
@@ -209,7 +209,7 @@ class TestLLMClient:
             location=location,
             docstring="Authenticate a user with credentials.",
         )
-        
+
         answer = await client.answer_code_question(
             "How does authentication work?",
             [entity],

@@ -7,7 +7,7 @@ REQ-RSC-001 ~ REQ-RSC-004
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -317,8 +317,9 @@ class TestResourceRegistration:
 
     def test_register_resources(self, config: Config):
         """Test registering resources with server."""
-        from codegraph_mcp.mcp.resources import register
         from mcp.server import Server
+
+        from codegraph_mcp.mcp.resources import register
 
         server = Server("test")
         register(server, config)

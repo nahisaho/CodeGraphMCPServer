@@ -7,7 +7,6 @@ MCPサーバーの統合テスト。
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -120,8 +119,9 @@ class TestCLI:
 
     def test_main_no_command(self):
         """Test main with no command shows help."""
-        from codegraph_mcp.__main__ import main
         import sys
+
+        from codegraph_mcp.__main__ import main
 
         old_argv = sys.argv
         sys.argv = ["codegraph-mcp"]
@@ -139,8 +139,9 @@ class TestIndexCommand:
 
     def test_cmd_index(self, temp_repo: Path):
         """Test index command."""
-        from codegraph_mcp.__main__ import cmd_index
         import argparse
+
+        from codegraph_mcp.__main__ import cmd_index
 
         args = argparse.Namespace(
             path=temp_repo,
@@ -160,11 +161,10 @@ class TestStatsCommand:
 
     def test_cmd_stats(self, temp_repo: Path):
         """Test stats command."""
-        from codegraph_mcp.__main__ import cmd_stats
         import argparse
 
         # First index the repo
-        from codegraph_mcp.__main__ import cmd_index
+        from codegraph_mcp.__main__ import cmd_index, cmd_stats
         index_args = argparse.Namespace(
             path=temp_repo,
             full=False,
@@ -188,8 +188,8 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_index_and_query(self, temp_repo: Path):
         """Test indexing and then querying."""
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine, GraphQuery
+        from codegraph_mcp.core.indexer import Indexer
 
         # Index
         indexer = Indexer()
@@ -215,8 +215,8 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_index_and_find_callers(self, temp_repo: Path):
         """Test indexing and finding callers."""
-        from codegraph_mcp.core.indexer import Indexer
         from codegraph_mcp.core.graph import GraphEngine
+        from codegraph_mcp.core.indexer import Indexer
 
         # Index
         indexer = Indexer()

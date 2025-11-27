@@ -3,7 +3,6 @@ Sample Python project for testing.
 A simple calculator module.
 """
 
-from typing import Optional
 
 
 class Calculator:
@@ -37,7 +36,7 @@ class Calculator:
         self._record(f"{a} * {b} = {result}")
         return result
 
-    def divide(self, a: float, b: float) -> Optional[float]:
+    def divide(self, a: float, b: float) -> float | None:
         """Divide a by b. Returns None if b is zero."""
         if b == 0:
             return None
@@ -70,7 +69,7 @@ class ScientificCalculator(Calculator):
         self._record(f"{base} ^ {exponent} = {result}")
         return result
 
-    def square_root(self, value: float) -> Optional[float]:
+    def square_root(self, value: float) -> float | None:
         """Calculate square root. Returns None for negative values."""
         if value < 0:
             return None
@@ -84,7 +83,7 @@ def calculate_sum(numbers: list[float]) -> float:
     return sum(numbers)
 
 
-def calculate_average(numbers: list[float]) -> Optional[float]:
+def calculate_average(numbers: list[float]) -> float | None:
     """Calculate average of a list of numbers."""
     if not numbers:
         return None

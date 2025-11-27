@@ -8,14 +8,14 @@ Requirements: REQ-GRF-001 ~ REQ-GRF-006
 Design Reference: design-core-engine.md §2.2, design-storage.md
 """
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
-import json
+from typing import Any
 
 import networkx as nx
 
-from codegraph_mcp.core.parser import Entity, Relation, EntityType, RelationType
+from codegraph_mcp.core.parser import Entity, EntityType, Relation, RelationType
 
 
 @dataclass
@@ -112,13 +112,13 @@ class QueryResult:
 @dataclass
 class GraphStatistics:
     """Statistics about the graph."""
-    
+
     entity_count: int = 0
     relation_count: int = 0
     community_count: int = 0
     file_count: int = 0
     languages: list[str] = field(default_factory=list)
-    
+
     # Per-type counts
     entities_by_type: dict[str, int] = field(default_factory=dict)
     relations_by_type: dict[str, int] = field(default_factory=dict)
@@ -127,20 +127,20 @@ class GraphStatistics:
 class GraphEngine:
     """
     SQLite-based graph engine for code analysis.
-    
+
     Requirements: REQ-GRF-001 ~ REQ-GRF-006
     Design Reference: design-core-engine.md §2.2
-    
+
     Usage:
         engine = GraphEngine(Path("/repo"))
         engine.add_entity(entity)
         result = engine.query(GraphQuery("find all functions"))
     """
-    
+
     def __init__(self, repo_path: Path, db_path: Path | None = None) -> None:
         """
         Initialize the graph engine.
-        
+
         Args:
             repo_path: Path to the repository
             db_path: Path to SQLite database (default: .codegraph/graph.db)
@@ -148,21 +148,21 @@ class GraphEngine:
         self.repo_path = repo_path
         self.db_path = db_path or (repo_path / ".codegraph" / "graph.db")
         self._connection: Any = None
-    
+
     async def initialize(self) -> None:
         """
         Initialize database connection and schema.
-        
+
         Requirements: REQ-GRF-005
         """
         import aiosqlite
-        
+
         # Ensure directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         self._connection = await aiosqlite.connect(self.db_path)
         await self._create_schema()
-    
+
     async def _create_schema(self) -> None:
         """Create database schema if not exists."""
         schema = """
@@ -186,7 +186,7 @@ class GraphEngine:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
         -- Relations table (REQ-GRF-004)
         CREATE TABLE IF NOT EXISTS relations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -198,7 +198,7 @@ class GraphEngine:
             FOREIGN KEY (source_id) REFERENCES entities(id) ON DELETE CASCADE,
             FOREIGN KEY (target_id) REFERENCES entities(id) ON DELETE CASCADE
         );
-        
+
         -- Communities table (REQ-SEM-003)
         CREATE TABLE IF NOT EXISTS communities (
             id INTEGER PRIMARY KEY,
@@ -210,7 +210,7 @@ class GraphEngine:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (parent_id) REFERENCES communities(id)
         );
-        
+
         -- File tracking table
         CREATE TABLE IF NOT EXISTS files (
             path TEXT PRIMARY KEY,
@@ -220,7 +220,7 @@ class GraphEngine:
             entity_count INTEGER DEFAULT 0,
             indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
         -- Indexes (REQ-GRF-006)
         CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
         CREATE INDEX IF NOT EXISTS idx_entities_file ON entities(file_path);
@@ -230,39 +230,39 @@ class GraphEngine:
         CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source_id);
         CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target_id);
         CREATE INDEX IF NOT EXISTS idx_relations_type ON relations(type);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_relations_unique 
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_relations_unique
             ON relations(source_id, target_id, type);
         """
-        
+
         for statement in schema.split(";"):
             statement = statement.strip()
             if statement:
                 await self._connection.execute(statement)
         await self._connection.commit()
-    
+
     async def close(self) -> None:
         """Close database connection."""
         if self._connection:
             await self._connection.close()
             self._connection = None
-    
+
     async def add_entity(self, entity: Entity) -> str:
         """
         Add an entity to the graph.
-        
+
         Args:
             entity: Entity to add
-            
+
         Returns:
             Entity ID
-            
+
         Requirements: REQ-GRF-003
         """
         import json
-        
+
         await self._connection.execute(
             """
-            INSERT OR REPLACE INTO entities 
+            INSERT OR REPLACE INTO entities
             (id, type, name, qualified_name, file_path, start_line, end_line,
              start_column, end_column, signature, docstring, source_code, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -285,24 +285,24 @@ class GraphEngine:
         )
         await self._connection.commit()
         return entity.id
-    
+
     async def add_relation(self, relation: Relation) -> int:
         """
         Add a relation to the graph.
-        
+
         Args:
             relation: Relation to add
-            
+
         Returns:
             Relation ID
-            
+
         Requirements: REQ-GRF-004
         """
         import json
-        
+
         cursor = await self._connection.execute(
             """
-            INSERT OR IGNORE INTO relations 
+            INSERT OR IGNORE INTO relations
             (source_id, target_id, type, weight, metadata)
             VALUES (?, ?, ?, ?, ?)
             """,
@@ -316,23 +316,23 @@ class GraphEngine:
         )
         await self._connection.commit()
         return cursor.lastrowid
-    
+
     async def add_entities_batch(self, entities: list[Entity]) -> int:
         """
         Add multiple entities in a single batch operation.
-        
+
         This is significantly faster than adding entities one by one
         because it uses executemany and commits once at the end.
-        
+
         Args:
             entities: List of entities to add.
-            
+
         Returns:
             Number of entities added.
         """
         if not entities:
             return 0
-        
+
         data = [
             (
                 entity.id,
@@ -348,7 +348,7 @@ class GraphEngine:
             )
             for entity in entities
         ]
-        
+
         await self._connection.executemany(
             """
             INSERT OR REPLACE INTO entities
@@ -360,23 +360,23 @@ class GraphEngine:
         )
         await self._connection.commit()
         return len(entities)
-    
+
     async def add_relations_batch(self, relations: list[Relation]) -> int:
         """
         Add multiple relations in a single batch operation.
-        
+
         This is significantly faster than adding relations one by one
         because it uses executemany and commits once at the end.
-        
+
         Args:
             relations: List of relations to add.
-            
+
         Returns:
             Number of relations added.
         """
         if not relations:
             return 0
-        
+
         data = [
             (
                 relation.source_id,
@@ -387,7 +387,7 @@ class GraphEngine:
             )
             for relation in relations
         ]
-        
+
         await self._connection.executemany(
             """
             INSERT OR IGNORE INTO relations
@@ -398,7 +398,7 @@ class GraphEngine:
         )
         await self._connection.commit()
         return len(relations)
-    
+
     async def resolve_entity_id(
         self,
         entity_id: str,
@@ -406,17 +406,17 @@ class GraphEngine:
     ) -> str | None:
         """
         Resolve a partial entity ID to a full entity ID.
-        
+
         Supports:
         - Exact match: Returns if entity_id matches exactly
         - Name match: Searches by entity name
         - Qualified name suffix: Searches by qualified_name ending
         - File + name: "filename::name" pattern
-        
+
         Args:
             entity_id: Full or partial entity identifier
             entity_type: Optional type filter
-            
+
         Returns:
             Full entity ID or None if not found/ambiguous
         """
@@ -428,15 +428,15 @@ class GraphEngine:
         row = await cursor.fetchone()
         if row:
             return row[0]
-        
+
         # Build query for partial matches
         type_filter = ""
         params: list[Any] = []
-        
+
         if entity_type:
             type_filter = " AND type = ?"
             params.append(entity_type.value)
-        
+
         # Try name exact match (may return multiple)
         cursor = await self._connection.execute(
             f"""
@@ -445,7 +445,7 @@ class GraphEngine:
             ORDER BY LENGTH(id) ASC
             LIMIT 10
             """,
-            [entity_id] + params,
+            [entity_id, *params],
         )
         rows = await cursor.fetchall()
         if len(rows) == 1:
@@ -462,7 +462,7 @@ class GraphEngine:
             ORDER BY LENGTH(id) ASC
             LIMIT 10
             """,
-            [f"%{entity_id}"] + params,
+            [f"%{entity_id}", *params],
         )
         rows = await cursor.fetchall()
         if len(rows) == 1:
@@ -470,26 +470,26 @@ class GraphEngine:
         elif len(rows) > 1:
             # Multiple matches - ambiguous, return None
             return None
-        
+
         # Try file::name pattern
         if "::" in entity_id:
             parts = entity_id.rsplit("::", 1)
             file_part, name_part = parts[0], parts[1]
             cursor = await self._connection.execute(
                 f"""
-                SELECT id FROM entities 
+                SELECT id FROM entities
                 WHERE name = ? AND file_path LIKE ?{type_filter}
                 ORDER BY LENGTH(id) ASC
                 LIMIT 10
                 """,
-                [name_part, f"%{file_part}%"] + params,
+                [name_part, f"%{file_part}%", *params],
             )
             rows = await cursor.fetchall()
             if rows:
                 return rows[0][0]
-        
+
         return None
-    
+
     async def search_entities(
         self,
         pattern: str,
@@ -498,45 +498,45 @@ class GraphEngine:
     ) -> list[Entity]:
         """
         Search entities by name pattern.
-        
+
         Args:
             pattern: Search pattern (supports SQL LIKE wildcards)
             entity_type: Optional type filter
             limit: Maximum results
-            
+
         Returns:
             List of matching entities
         """
         type_filter = ""
         params: list[Any] = [f"%{pattern}%", f"%{pattern}%"]
-        
+
         if entity_type:
             type_filter = " AND type = ?"
             params.append(entity_type.value)
-        
+
         params.append(limit)
-        
+
         cursor = await self._connection.execute(
             f"""
-            SELECT * FROM entities 
+            SELECT * FROM entities
             WHERE (name LIKE ? OR qualified_name LIKE ?){type_filter}
-            ORDER BY 
+            ORDER BY
                 CASE WHEN name = ? THEN 0 ELSE 1 END,
                 LENGTH(name) ASC
             LIMIT ?
             """,
-            params[:2] + [pattern] + params[2:],
+            [*params[:2], pattern, *params[2:]],
         )
         rows = await cursor.fetchall()
         return [self._row_to_entity(row) for row in rows]
-    
+
     async def get_entity(self, entity_id: str) -> Entity | None:
         """Get an entity by ID (supports partial matching)."""
         # Try to resolve partial ID
         resolved_id = await self.resolve_entity_id(entity_id)
         if not resolved_id:
             return None
-        
+
         cursor = await self._connection.execute(
             "SELECT * FROM entities WHERE id = ?",
             (resolved_id,),
@@ -545,7 +545,7 @@ class GraphEngine:
         if row:
             return self._row_to_entity(row)
         return None
-    
+
     async def find_callers(self, entity_id: str) -> list[Entity]:
         """
         Find all entities that call the given entity.
@@ -824,55 +824,55 @@ class GraphEngine:
                 entities.append(self._row_to_entity(row))
 
         return entities[:limit], relations
-    
+
     async def get_statistics(self) -> GraphStatistics:
         """
         Get graph statistics.
-        
+
         Requirements: REQ-RSC-004
         """
         stats = GraphStatistics()
-        
+
         # Total counts
         cursor = await self._connection.execute(
             "SELECT COUNT(*) FROM entities"
         )
         stats.entity_count = (await cursor.fetchone())[0]
-        
+
         cursor = await self._connection.execute(
             "SELECT COUNT(*) FROM relations"
         )
         stats.relation_count = (await cursor.fetchone())[0]
-        
+
         cursor = await self._connection.execute(
             "SELECT COUNT(*) FROM communities"
         )
         stats.community_count = (await cursor.fetchone())[0]
-        
+
         cursor = await self._connection.execute(
             "SELECT COUNT(DISTINCT file_path) FROM entities"
         )
         stats.file_count = (await cursor.fetchone())[0]
-        
+
         # Counts by type
         cursor = await self._connection.execute(
             "SELECT type, COUNT(*) FROM entities GROUP BY type"
         )
         for row in await cursor.fetchall():
             stats.entities_by_type[row[0]] = row[1]
-        
+
         cursor = await self._connection.execute(
             "SELECT type, COUNT(*) FROM relations GROUP BY type"
         )
         for row in await cursor.fetchall():
             stats.relations_by_type[row[0]] = row[1]
-        
+
         return stats
-    
+
     def _row_to_entity(self, row: tuple) -> Entity:
         """Convert database row to Entity object."""
         from codegraph_mcp.core.parser import Location
-        
+
         return Entity(
             id=row[0],
             type=EntityType(row[1]),
@@ -899,23 +899,23 @@ class GraphEngine:
     ) -> list[list[str]]:
         """
         Find all paths between two entities.
-        
+
         Args:
             source_id: Source entity ID
             target_id: Target entity ID
             max_depth: Maximum path length
-            
+
         Returns:
             List of paths (each path is a list of entity IDs)
-            
+
         Requirements: REQ-TLS-005
         """
         # Build NetworkX graph from relations
         G = await self._build_networkx_graph()
-        
+
         if source_id not in G or target_id not in G:
             return []
-        
+
         try:
             # Find all simple paths up to max_depth
             paths = list(nx.all_simple_paths(
@@ -928,21 +928,21 @@ class GraphEngine:
     async def _build_networkx_graph(self) -> nx.DiGraph:
         """Build NetworkX graph from database."""
         G = nx.DiGraph()
-        
+
         # Add all entities as nodes
         cursor = await self._connection.execute(
             "SELECT id, type, name FROM entities"
         )
         for row in await cursor.fetchall():
             G.add_node(row[0], type=row[1], name=row[2])
-        
+
         # Add all relations as edges
         cursor = await self._connection.execute(
             "SELECT source_id, target_id, type, weight FROM relations"
         )
         for row in await cursor.fetchall():
             G.add_edge(row[0], row[1], type=row[2], weight=row[3])
-        
+
         return G
 
     async def get_neighbors(
@@ -953,24 +953,24 @@ class GraphEngine:
     ) -> list[Entity]:
         """
         Get neighboring entities.
-        
+
         Args:
             entity_id: Entity ID
             direction: "in", "out", or "both"
             relation_types: Filter by relation types
-            
+
         Returns:
             List of neighboring entities
         """
         entities = []
-        
+
         type_filter = ""
         params: list[Any] = [entity_id]
         if relation_types:
             placeholders = ",".join("?" * len(relation_types))
             type_filter = f" AND r.type IN ({placeholders})"
             params.extend(t.value for t in relation_types)
-        
+
         if direction in ("out", "both"):
             cursor = await self._connection.execute(
                 f"""
@@ -982,7 +982,7 @@ class GraphEngine:
             )
             for row in await cursor.fetchall():
                 entities.append(self._row_to_entity(row))
-        
+
         if direction in ("in", "both"):
             cursor = await self._connection.execute(
                 f"""
@@ -994,7 +994,7 @@ class GraphEngine:
             )
             for row in await cursor.fetchall():
                 entities.append(self._row_to_entity(row))
-        
+
         # Deduplicate
         seen = set()
         unique = []
@@ -1002,7 +1002,7 @@ class GraphEngine:
             if e.id not in seen:
                 seen.add(e.id)
                 unique.append(e)
-        
+
         return unique
 
     async def get_subgraph(
@@ -1012,27 +1012,27 @@ class GraphEngine:
     ) -> QueryResult:
         """
         Get a subgraph centered on an entity.
-        
+
         Args:
             entity_id: Center entity ID
             depth: Radius of the subgraph
-            
+
         Returns:
             QueryResult with entities and relations in the subgraph
         """
         visited: set[str] = set()
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         async def traverse(eid: str, current_depth: int) -> None:
             if eid in visited or current_depth > depth:
                 return
             visited.add(eid)
-            
+
             entity = await self.get_entity(eid)
             if entity:
                 entities.append(entity)
-            
+
             # Get outgoing relations
             cursor = await self._connection.execute(
                 "SELECT target_id, type, weight FROM relations WHERE source_id = ?",
@@ -1047,7 +1047,7 @@ class GraphEngine:
                 )
                 relations.append(rel)
                 await traverse(row[0], current_depth + 1)
-            
+
             # Get incoming relations
             cursor = await self._connection.execute(
                 "SELECT source_id, type, weight FROM relations WHERE target_id = ?",
@@ -1062,9 +1062,9 @@ class GraphEngine:
                 )
                 relations.append(rel)
                 await traverse(row[0], current_depth + 1)
-        
+
         await traverse(entity_id, 0)
-        
+
         return QueryResult(
             entities=entities,
             relations=relations,
@@ -1079,25 +1079,25 @@ class GraphEngine:
     ) -> list[Entity]:
         """
         Search entities by name pattern.
-        
+
         Args:
             name_pattern: SQL LIKE pattern for name
             entity_types: Filter by entity types
             limit: Maximum results
-            
+
         Returns:
             List of matching entities
         """
         sql = "SELECT * FROM entities WHERE name LIKE ?"
         params: list[Any] = [f"%{name_pattern}%"]
-        
+
         if entity_types:
             placeholders = ",".join("?" * len(entity_types))
             sql += f" AND type IN ({placeholders})"
             params.extend(t.value for t in entity_types)
-        
+
         sql += f" LIMIT {limit}"
-        
+
         cursor = await self._connection.execute(sql, params)
         rows = await cursor.fetchall()
         return [self._row_to_entity(row) for row in rows]
@@ -1105,10 +1105,10 @@ class GraphEngine:
     async def delete_file_entities(self, file_path: Path) -> int:
         """
         Delete all entities from a file.
-        
+
         Args:
             file_path: Path to the file
-            
+
         Returns:
             Number of deleted entities
         """
@@ -1118,10 +1118,10 @@ class GraphEngine:
             (str(file_path),),
         )
         entity_ids = [row[0] for row in await cursor.fetchall()]
-        
+
         if not entity_ids:
             return 0
-        
+
         # Delete relations
         placeholders = ",".join("?" * len(entity_ids))
         await self._connection.execute(
@@ -1132,13 +1132,13 @@ class GraphEngine:
             f"DELETE FROM relations WHERE target_id IN ({placeholders})",
             entity_ids,
         )
-        
+
         # Delete entities
         await self._connection.execute(
             f"DELETE FROM entities WHERE id IN ({placeholders})",
             entity_ids,
         )
-        
+
         await self._connection.commit()
         return len(entity_ids)
 

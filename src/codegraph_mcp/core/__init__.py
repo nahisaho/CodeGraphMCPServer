@@ -13,35 +13,36 @@ This module provides the core functionality for code graph analysis:
 Architecture: Library-First (ADR-001)
 """
 
-from codegraph_mcp.core.parser import ASTParser, ParseResult, Entity, Relation
+from codegraph_mcp.core.community import Community, CommunityDetector
 from codegraph_mcp.core.graph import GraphEngine, GraphQuery, QueryResult
-from codegraph_mcp.core.indexer import Indexer, IndexResult
-from codegraph_mcp.core.community import CommunityDetector, Community
-from codegraph_mcp.core.semantic import SemanticAnalyzer
-from codegraph_mcp.core.llm import LLMClient, LLMConfig
 from codegraph_mcp.core.graphrag import GraphRAGSearch
+from codegraph_mcp.core.indexer import Indexer, IndexResult
+from codegraph_mcp.core.llm import LLMClient, LLMConfig
+from codegraph_mcp.core.parser import ASTParser, Entity, ParseResult, Relation
+from codegraph_mcp.core.semantic import SemanticAnalyzer
+
 
 __all__ = [
     # Parser
     "ASTParser",
-    "ParseResult",
+    "Community",
+    # Community
+    "CommunityDetector",
     "Entity",
-    "Relation",
     # Graph
     "GraphEngine",
     "GraphQuery",
-    "QueryResult",
+    # GraphRAG
+    "GraphRAGSearch",
+    "IndexResult",
     # Indexer
     "Indexer",
-    "IndexResult",
-    # Community
-    "CommunityDetector",
-    "Community",
-    # Semantic
-    "SemanticAnalyzer",
     # LLM
     "LLMClient",
     "LLMConfig",
-    # GraphRAG
-    "GraphRAGSearch",
+    "ParseResult",
+    "QueryResult",
+    "Relation",
+    # Semantic
+    "SemanticAnalyzer",
 ]

@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from codegraph_mcp.core.parser import (
-    ParseResult,
     Entity,
-    Relation,
-    Location,
     EntityType,
+    Location,
+    ParseResult,
+    Relation,
     RelationType,
 )
 from codegraph_mcp.languages.config import (
@@ -28,7 +28,7 @@ from codegraph_mcp.languages.config import (
 class JavaScriptExtractor(BaseExtractor):
     """
     JavaScript-specific entity and relation extractor.
-    
+
     Extracts:
     - Functions and arrow functions
     - Classes
@@ -36,10 +36,10 @@ class JavaScriptExtractor(BaseExtractor):
     - Import/export relations
     - Call relations
     - Variable declarations (const, let, var)
-    
+
     Note: Uses tree-sitter-javascript for pure JS files.
     """
-    
+
     config = LanguageConfig(
         name="javascript",
         extensions=[".js", ".mjs", ".cjs", ".jsx"],
@@ -55,7 +55,7 @@ class JavaScriptExtractor(BaseExtractor):
         import_nodes=["import_statement"],
         interface_nodes=[],  # No interfaces in pure JS
     )
-    
+
     def extract(
         self,
         tree: Any,
@@ -65,11 +65,11 @@ class JavaScriptExtractor(BaseExtractor):
         """Extract entities and relations from JavaScript AST."""
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         # Create module entity
         module_name = file_path.stem
         module_id = self._generate_entity_id(file_path, module_name, 1)
-        
+
         entities.append(Entity(
             id=module_id,
             type=EntityType.MODULE,
@@ -83,11 +83,11 @@ class JavaScriptExtractor(BaseExtractor):
                 end_column=0,
             ),
         ))
-        
+
         # Track current class context
         self._current_class: str | None = None
         self._current_class_id: str | None = None
-        
+
         # Walk the tree
         self._walk_tree(
             tree.root_node,
@@ -97,9 +97,9 @@ class JavaScriptExtractor(BaseExtractor):
             relations,
             module_id,
         )
-        
+
         return ParseResult(entities=entities, relations=relations)
-    
+
     def _walk_tree(
         self,
         node: Any,
@@ -110,7 +110,7 @@ class JavaScriptExtractor(BaseExtractor):
         parent_id: str,
     ) -> None:
         """Recursively walk the AST tree."""
-        
+
         if node.type == "function_declaration":
             entity = self._extract_function(node, file_path, source_code)
             if entity:
@@ -123,7 +123,7 @@ class JavaScriptExtractor(BaseExtractor):
                 self._extract_calls(
                     node, file_path, source_code, entity.id, relations
                 )
-        
+
         elif node.type == "generator_function_declaration":
             entity = self._extract_generator(node, file_path, source_code)
             if entity:
@@ -136,7 +136,7 @@ class JavaScriptExtractor(BaseExtractor):
                 self._extract_calls(
                     node, file_path, source_code, entity.id, relations
                 )
-        
+
         elif node.type == "class_declaration":
             entity = self._extract_class(node, file_path, source_code)
             if entity:
@@ -146,29 +146,29 @@ class JavaScriptExtractor(BaseExtractor):
                     target_id=entity.id,
                     type=RelationType.CONTAINS,
                 ))
-                
+
                 # Extract inheritance
                 self._extract_class_relations(
                     node, file_path, source_code, entity.id, relations
                 )
-                
+
                 # Process class body
                 old_class = self._current_class
                 old_class_id = self._current_class_id
                 self._current_class = entity.name
                 self._current_class_id = entity.id
-                
+
                 for child in node.children:
                     if child.type == "class_body":
                         self._walk_tree(
                             child, file_path, source_code,
                             entities, relations, entity.id,
                         )
-                
+
                 self._current_class = old_class
                 self._current_class_id = old_class_id
                 return
-        
+
         elif node.type == "method_definition":
             entity = self._extract_method(node, file_path, source_code)
             if entity:
@@ -181,32 +181,32 @@ class JavaScriptExtractor(BaseExtractor):
                 self._extract_calls(
                     node, file_path, source_code, entity.id, relations
                 )
-        
-        elif node.type == "lexical_declaration" or node.type == "variable_declaration":
+
+        elif node.type in {"lexical_declaration", "variable_declaration"}:
             # Handle const/let/var with arrow functions
             self._extract_variable_functions(
                 node, file_path, source_code,
                 entities, relations, parent_id,
             )
-        
+
         elif node.type == "import_statement":
             self._extract_import(
                 node, file_path, source_code, parent_id, relations
             )
-        
+
         elif node.type == "export_statement":
             self._extract_export(
                 node, file_path, source_code,
                 entities, relations, parent_id,
             )
-        
+
         # Recurse
         for child in node.children:
             self._walk_tree(
                 child, file_path, source_code,
                 entities, relations, parent_id,
             )
-    
+
     def _extract_function(
         self,
         node: Any,
@@ -219,13 +219,13 @@ class JavaScriptExtractor(BaseExtractor):
             if child.type == "identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         # Extract parameters for signature
         signature = self._extract_function_signature(node, name, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.FUNCTION,
@@ -241,7 +241,7 @@ class JavaScriptExtractor(BaseExtractor):
             signature=signature,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_generator(
         self,
         node: Any,
@@ -254,10 +254,10 @@ class JavaScriptExtractor(BaseExtractor):
             if child.type == "identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.FUNCTION,
@@ -273,7 +273,7 @@ class JavaScriptExtractor(BaseExtractor):
             signature=f"function* {name}()",
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_class(
         self,
         node: Any,
@@ -286,10 +286,10 @@ class JavaScriptExtractor(BaseExtractor):
             if child.type == "identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.CLASS,
@@ -304,7 +304,7 @@ class JavaScriptExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_method(
         self,
         node: Any,
@@ -317,7 +317,7 @@ class JavaScriptExtractor(BaseExtractor):
         is_setter = False
         is_static = False
         is_async = False
-        
+
         for child in node.children:
             if child.type == "property_identifier":
                 name = self._get_node_text(child, source_code)
@@ -329,10 +329,10 @@ class JavaScriptExtractor(BaseExtractor):
                 is_static = True
             elif child.type == "async":
                 is_async = True
-        
+
         if not name:
             return None
-        
+
         # Build signature
         prefix_parts = []
         if is_static:
@@ -343,14 +343,14 @@ class JavaScriptExtractor(BaseExtractor):
             prefix_parts.append("get")
         if is_setter:
             prefix_parts.append("set")
-        
+
         prefix = " ".join(prefix_parts)
         signature = f"{prefix} {name}()" if prefix else f"{name}()"
-        
+
         qualified_name = f"{file_path}::{name}"
         if self._current_class:
             qualified_name = f"{file_path}::{self._current_class}.{name}"
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.METHOD,
@@ -366,7 +366,7 @@ class JavaScriptExtractor(BaseExtractor):
             signature=signature,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_variable_functions(
         self,
         node: Any,
@@ -382,14 +382,14 @@ class JavaScriptExtractor(BaseExtractor):
                 name = None
                 has_function = False
                 func_node = None
-                
+
                 for decl_child in child.children:
                     if decl_child.type == "identifier":
                         name = self._get_node_text(decl_child, source_code)
                     elif decl_child.type in ("arrow_function", "function_expression"):
                         has_function = True
                         func_node = decl_child
-                
+
                 if name and has_function and func_node:
                     entity = Entity(
                         id=self._generate_entity_id(
@@ -417,7 +417,7 @@ class JavaScriptExtractor(BaseExtractor):
                         func_node, file_path, source_code,
                         entity.id, relations,
                     )
-    
+
     def _extract_class_relations(
         self,
         node: Any,
@@ -439,7 +439,7 @@ class JavaScriptExtractor(BaseExtractor):
                                     target_id=f"unresolved::{parent}",
                                     type=RelationType.INHERITS,
                                 ))
-    
+
     def _extract_import(
         self,
         node: Any,
@@ -459,7 +459,7 @@ class JavaScriptExtractor(BaseExtractor):
                     type=RelationType.IMPORTS,
                 ))
                 break
-    
+
     def _extract_export(
         self,
         node: Any,
@@ -500,7 +500,7 @@ class JavaScriptExtractor(BaseExtractor):
                     child, file_path, source_code,
                     entities, relations, parent_id,
                 )
-    
+
     def _extract_calls(
         self,
         node: Any,
@@ -527,11 +527,11 @@ class JavaScriptExtractor(BaseExtractor):
                         target_id=f"unresolved::{text}",
                         type=RelationType.CALLS,
                     ))
-        
+
         # Recurse
         for child in node.children:
             self._extract_calls(child, file_path, source_code, caller_id, relations)
-    
+
     def _extract_function_signature(
         self,
         node: Any,

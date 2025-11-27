@@ -9,7 +9,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+
 
 # グローバルなログフォーマット設定
 DEFAULT_FORMAT = (
@@ -45,8 +45,8 @@ class ColoredFormatter(logging.Formatter):
 
     def __init__(
         self,
-        fmt: Optional[str] = None,
-        datefmt: Optional[str] = None,
+        fmt: str | None = None,
+        datefmt: str | None = None,
         use_colors: bool = True,
     ):
         super().__init__(fmt, datefmt)
@@ -103,7 +103,7 @@ logging.setLoggerClass(StructuredLogger)
 
 def setup_logging(
     level: str = "INFO",
-    log_file: Optional[Path] = None,
+    log_file: Path | None = None,
     use_colors: bool = True,
     debug_mode: bool = False,
 ) -> None:
@@ -182,7 +182,7 @@ class LogContext:
         self.operation = operation
         self.level = level
         self.context = context
-        self.start_time: Optional[datetime] = None
+        self.start_time: datetime | None = None
 
     def __enter__(self) -> "LogContext":
         self.start_time = datetime.now()

@@ -28,7 +28,7 @@ from codegraph_mcp.languages.config import (
 class HCLExtractor(BaseExtractor):
     """
     HCL/Terraform-specific entity and relation extractor.
-    
+
     Extracts:
     - Resources (resource "type" "name")
     - Data sources (data "type" "name")
@@ -37,10 +37,10 @@ class HCLExtractor(BaseExtractor):
     - Modules (module "name")
     - Locals (locals)
     - Providers (provider "name")
-    
+
     Requirements: REQ-AST-008
     """
-    
+
     config = LanguageConfig(
         name="hcl",
         extensions=[".tf", ".hcl", ".tfvars"],
@@ -50,7 +50,7 @@ class HCLExtractor(BaseExtractor):
         import_nodes=[],
         interface_nodes=[],
     )
-    
+
     def extract(
         self,
         tree: Any,
@@ -60,11 +60,11 @@ class HCLExtractor(BaseExtractor):
         """Extract entities and relations from HCL AST."""
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         # Use filename as module
         module_name = file_path.stem
         module_id = self._generate_entity_id(file_path, module_name, 1)
-        
+
         entities.append(Entity(
             id=module_id,
             type=EntityType.MODULE,
@@ -78,7 +78,7 @@ class HCLExtractor(BaseExtractor):
                 end_column=0,
             ),
         ))
-        
+
         # Walk the tree
         self._walk_tree(
             tree.root_node,
@@ -88,9 +88,9 @@ class HCLExtractor(BaseExtractor):
             relations,
             module_id,
         )
-        
+
         return ParseResult(entities=entities, relations=relations)
-    
+
     def _walk_tree(
         self,
         node: Any,
@@ -101,7 +101,7 @@ class HCLExtractor(BaseExtractor):
         parent_id: str,
     ) -> None:
         """Recursively walk the AST tree."""
-        
+
         if node.type == "block":
             entity = self._extract_block(node, file_path, source_code)
             if entity:
@@ -113,14 +113,14 @@ class HCLExtractor(BaseExtractor):
                 ))
                 # Extract references within block
                 self._extract_references(node, file_path, source_code, entity.id, relations)
-        
+
         # Recurse into children
         for child in node.children:
             self._walk_tree(
                 child, file_path, source_code,
                 entities, relations, parent_id,
             )
-    
+
     def _extract_block(
         self,
         node: Any,
@@ -130,7 +130,7 @@ class HCLExtractor(BaseExtractor):
         """Extract HCL block entity (resource, data, variable, etc.)."""
         block_type = None
         labels: list[str] = []
-        
+
         for child in node.children:
             if child.type == "identifier":
                 if block_type is None:
@@ -140,10 +140,10 @@ class HCLExtractor(BaseExtractor):
                 # Remove quotes
                 label = label.strip('"')
                 labels.append(label)
-        
+
         if not block_type:
             return None
-        
+
         # Determine entity type and name based on block type
         if block_type == "resource":
             if len(labels) >= 2:
@@ -190,14 +190,11 @@ class HCLExtractor(BaseExtractor):
             entity_type = EntityType.MODULE
         else:
             # Generic block
-            if labels:
-                name = f"{block_type}.{'.'.join(labels)}"
-            else:
-                name = block_type
+            name = f"{block_type}.{'.'.join(labels)}" if labels else block_type
             entity_type = EntityType.CLASS
-        
+
         qualified_name = f"{file_path}::{name}"
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=entity_type,
@@ -212,7 +209,7 @@ class HCLExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_references(
         self,
         node: Any,
@@ -225,7 +222,7 @@ class HCLExtractor(BaseExtractor):
         # Look for expressions that reference other resources
         if node.type == "expression":
             text = self._get_node_text(node, source_code)
-            
+
             # Check for resource references (e.g., aws_instance.example)
             if "." in text and not text.startswith('"'):
                 # Could be a reference
@@ -237,17 +234,17 @@ class HCLExtractor(BaseExtractor):
                     else:
                         # Likely a resource reference
                         ref_name = f"{parts[0]}.{parts[1]}"
-                    
+
                     relations.append(Relation(
                         source_id=entity_id,
                         target_id=f"unresolved::{ref_name}",
                         type=RelationType.CALLS,
                     ))
-        
+
         # Recurse
         for child in node.children:
             self._extract_references(child, file_path, source_code, entity_id, relations)
-    
+
     def _extract_doc_comment(self, node: Any, source_code: str) -> str | None:
         """Extract comment (# or //)."""
         return None

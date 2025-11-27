@@ -6,11 +6,10 @@ Tests for JavaScript language extraction.
 Task: TASK-052
 """
 
+
 import pytest
-from pathlib import Path
 
 from codegraph_mcp.languages.javascript import JavaScriptExtractor
-from codegraph_mcp.core.parser import EntityType, RelationType
 
 
 class TestJavaScriptExtractor:

@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional
 
 from .logging import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -34,7 +34,7 @@ class GitChange:
     """Git変更情報"""
     path: Path
     change_type: ChangeType
-    old_path: Optional[Path] = None  # For renames
+    old_path: Path | None = None  # For renames
     timestamp: datetime = field(default_factory=datetime.now)
 
     def __str__(self) -> str:
@@ -69,7 +69,7 @@ class GitOperations:
 
     async def get_changed_files(
         self,
-        since: Optional[str] = None,
+        since: str | None = None,
         include_untracked: bool = True,
     ) -> list[GitChange]:
         """
@@ -188,7 +188,7 @@ class GitOperations:
         self,
         path: Path,
         revision: str = "HEAD",
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         特定リビジョンのファイル内容を取得
 
@@ -206,7 +206,7 @@ class GitOperations:
             logger.warning(f"Failed to get content: {path}@{revision}")
             return None
 
-    async def get_current_branch(self) -> Optional[str]:
+    async def get_current_branch(self) -> str | None:
         """現在のブランチ名を取得"""
         cmd = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
         try:
@@ -215,7 +215,7 @@ class GitOperations:
         except subprocess.CalledProcessError:
             return None
 
-    async def get_commit_hash(self, revision: str = "HEAD") -> Optional[str]:
+    async def get_commit_hash(self, revision: str = "HEAD") -> str | None:
         """コミットハッシュを取得"""
         cmd = ["git", "rev-parse", revision]
         try:
@@ -226,7 +226,7 @@ class GitOperations:
 
     async def get_tracked_files(
         self,
-        patterns: Optional[list[str]] = None,
+        patterns: list[str] | None = None,
     ) -> list[Path]:
         """
         追跡対象のファイル一覧を取得

@@ -28,7 +28,7 @@ from codegraph_mcp.languages.config import (
 class GoExtractor(BaseExtractor):
     """
     Go-specific entity and relation extractor.
-    
+
     Extracts:
     - Functions (func)
     - Structs (type X struct)
@@ -36,10 +36,10 @@ class GoExtractor(BaseExtractor):
     - Methods (func (r Receiver) Method())
     - Package declarations
     - Import statements
-    
+
     Requirements: REQ-AST-004
     """
-    
+
     config = LanguageConfig(
         name="go",
         extensions=[".go"],
@@ -49,7 +49,7 @@ class GoExtractor(BaseExtractor):
         import_nodes=["import_declaration", "import_spec"],
         interface_nodes=["type_declaration"],  # For interface
     )
-    
+
     def extract(
         self,
         tree: Any,
@@ -59,12 +59,12 @@ class GoExtractor(BaseExtractor):
         """Extract entities and relations from Go AST."""
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         # Extract package name for module entity
         package_name = self._extract_package_name(tree.root_node, source_code)
         module_name = package_name or file_path.stem
         module_id = self._generate_entity_id(file_path, module_name, 1)
-        
+
         entities.append(Entity(
             id=module_id,
             type=EntityType.MODULE,
@@ -78,10 +78,10 @@ class GoExtractor(BaseExtractor):
                 end_column=0,
             ),
         ))
-        
+
         # Track current receiver type for method extraction
         self._current_receiver: str | None = None
-        
+
         # Walk the tree
         self._walk_tree(
             tree.root_node,
@@ -91,9 +91,9 @@ class GoExtractor(BaseExtractor):
             relations,
             module_id,
         )
-        
+
         return ParseResult(entities=entities, relations=relations)
-    
+
     def _extract_package_name(self, root_node: Any, source_code: str) -> str | None:
         """Extract package name from AST."""
         for child in root_node.children:
@@ -102,7 +102,7 @@ class GoExtractor(BaseExtractor):
                     if pkg_child.type == "package_identifier":
                         return self._get_node_text(pkg_child, source_code)
         return None
-    
+
     def _walk_tree(
         self,
         node: Any,
@@ -113,7 +113,7 @@ class GoExtractor(BaseExtractor):
         parent_id: str,
     ) -> None:
         """Recursively walk the AST tree."""
-        
+
         if node.type == "function_declaration":
             entity = self._extract_function(node, file_path, source_code)
             if entity:
@@ -125,7 +125,7 @@ class GoExtractor(BaseExtractor):
                 ))
                 # Extract call relations
                 self._extract_calls(node, file_path, source_code, entity.id, relations)
-        
+
         elif node.type == "method_declaration":
             entity = self._extract_method(node, file_path, source_code)
             if entity:
@@ -137,23 +137,23 @@ class GoExtractor(BaseExtractor):
                 ))
                 # Extract call relations
                 self._extract_calls(node, file_path, source_code, entity.id, relations)
-        
+
         elif node.type == "type_declaration":
             # Can be struct, interface, or type alias
             self._extract_type_declaration(
                 node, file_path, source_code, entities, relations, parent_id
             )
-        
+
         elif node.type in ("import_declaration", "import_spec"):
             self._extract_import(node, file_path, source_code, parent_id, relations)
-        
+
         # Recurse into children
         for child in node.children:
             self._walk_tree(
                 child, file_path, source_code,
                 entities, relations, parent_id,
             )
-    
+
     def _extract_function(
         self,
         node: Any,
@@ -166,18 +166,18 @@ class GoExtractor(BaseExtractor):
             if child.type == "identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{name}"
-        
+
         # Extract signature (parameters and return type)
         signature = self._extract_function_signature(node, name, source_code)
-        
+
         # Extract doc comment (preceding comment)
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.FUNCTION,
@@ -194,7 +194,7 @@ class GoExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_method(
         self,
         node: Any,
@@ -204,7 +204,7 @@ class GoExtractor(BaseExtractor):
         """Extract method entity from method_declaration."""
         name = None
         receiver_type = None
-        
+
         for child in node.children:
             if child.type == "parameter_list":
                 # First parameter_list is the receiver
@@ -212,21 +212,21 @@ class GoExtractor(BaseExtractor):
                     receiver_type = self._extract_receiver_type(child, source_code)
             elif child.type == "field_identifier":
                 name = self._get_node_text(child, source_code)
-        
+
         if not name:
             return None
-        
+
         if receiver_type:
             qualified_name = f"{file_path}::{receiver_type}.{name}"
         else:
             qualified_name = f"{file_path}::{name}"
-        
+
         # Extract signature
         signature = self._extract_method_signature(node, name, receiver_type, source_code)
-        
+
         # Extract doc comment
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.METHOD,
@@ -243,7 +243,7 @@ class GoExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_receiver_type(self, param_list: Any, source_code: str) -> str | None:
         """Extract receiver type from parameter list."""
         for child in param_list.children:
@@ -257,7 +257,7 @@ class GoExtractor(BaseExtractor):
                             if ptr_child.type == "type_identifier":
                                 return self._get_node_text(ptr_child, source_code)
         return None
-    
+
     def _extract_type_declaration(
         self,
         node: Any,
@@ -273,7 +273,7 @@ class GoExtractor(BaseExtractor):
                 self._extract_type_spec(
                     child, file_path, source_code, entities, relations, parent_id
                 )
-    
+
     def _extract_type_spec(
         self,
         node: Any,
@@ -286,7 +286,7 @@ class GoExtractor(BaseExtractor):
         """Extract from type_spec node."""
         name = None
         type_node = None
-        
+
         for child in node.children:
             if child.type == "type_identifier":
                 name = self._get_node_text(child, source_code)
@@ -296,13 +296,13 @@ class GoExtractor(BaseExtractor):
             elif child.type == "interface_type":
                 type_node = child
                 entity_type = EntityType.INTERFACE
-        
+
         if not name or not type_node:
             return
-        
+
         qualified_name = f"{file_path}::{name}"
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         entity = Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=entity_type,
@@ -318,18 +318,18 @@ class GoExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-        
+
         entities.append(entity)
         relations.append(Relation(
             source_id=parent_id,
             target_id=entity.id,
             type=RelationType.CONTAINS,
         ))
-        
+
         # Extract interface method signatures for implements detection
         if entity_type == EntityType.INTERFACE:
             self._extract_interface_methods(type_node, file_path, source_code, entity.id, relations)
-    
+
     def _extract_interface_methods(
         self,
         node: Any,
@@ -342,13 +342,12 @@ class GoExtractor(BaseExtractor):
         # Interface methods can be used for implements detection
         for child in node.children:
             if child.type == "method_spec":
-                method_name = None
                 for spec_child in child.children:
                     if spec_child.type == "field_identifier":
-                        method_name = self._get_node_text(spec_child, source_code)
+                        self._get_node_text(spec_child, source_code)
                         break
                 # Could store method specs for later matching
-    
+
     def _extract_import(
         self,
         node: Any,
@@ -369,7 +368,7 @@ class GoExtractor(BaseExtractor):
                             self._extract_import_spec(spec, source_code, parent_id, relations)
         elif node.type == "import_spec":
             self._extract_import_spec(node, source_code, parent_id, relations)
-    
+
     def _extract_import_spec(
         self,
         node: Any,
@@ -388,7 +387,7 @@ class GoExtractor(BaseExtractor):
                     target_id=f"module::{import_path}",
                     type=RelationType.IMPORTS,
                 ))
-    
+
     def _extract_calls(
         self,
         node: Any,
@@ -404,7 +403,7 @@ class GoExtractor(BaseExtractor):
                 if child.type in ("identifier", "selector_expression"):
                     func_node = child
                     break
-            
+
             if func_node:
                 func_text = self._get_node_text(func_node, source_code)
                 relations.append(Relation(
@@ -412,11 +411,11 @@ class GoExtractor(BaseExtractor):
                     target_id=f"unresolved::{func_text}",
                     type=RelationType.CALLS,
                 ))
-        
+
         # Recurse
         for child in node.children:
             self._extract_calls(child, file_path, source_code, caller_id, relations)
-    
+
     def _extract_function_signature(
         self,
         node: Any,
@@ -426,19 +425,19 @@ class GoExtractor(BaseExtractor):
         """Extract function signature."""
         params = ""
         returns = ""
-        
+
         for child in node.children:
             if child.type == "parameter_list":
                 params = self._get_node_text(child, source_code)
-            elif child.type in ("type_identifier", "pointer_type", "slice_type", 
+            elif child.type in ("type_identifier", "pointer_type", "slice_type",
                                "map_type", "channel_type", "function_type",
                                "qualified_type", "parameter_list"):
                 # Return type
                 if params:  # Already got params, this is return
                     returns = " " + self._get_node_text(child, source_code)
-        
+
         return f"func {name}{params}{returns}"
-    
+
     def _extract_method_signature(
         self,
         node: Any,
@@ -451,7 +450,7 @@ class GoExtractor(BaseExtractor):
         returns = ""
         receiver = ""
         param_count = 0
-        
+
         for child in node.children:
             if child.type == "parameter_list":
                 param_count += 1
@@ -461,11 +460,11 @@ class GoExtractor(BaseExtractor):
                     params = self._get_node_text(child, source_code)
             elif child.type in ("type_identifier", "pointer_type", "slice_type"):
                 returns = " " + self._get_node_text(child, source_code)
-        
+
         if receiver:
             return f"func {receiver} {name}{params}{returns}"
         return f"func {name}{params}{returns}"
-    
+
     def _extract_doc_comment(self, node: Any, source_code: str) -> str | None:
         """Extract doc comment preceding a declaration."""
         # Go doc comments are // comments directly above declarations

@@ -5,14 +5,21 @@ Tests: TASK-050
 Requirements: REQ-SEM-001~004, REQ-TLS-010, REQ-TLS-011
 """
 
-import pytest
 import tempfile
 from pathlib import Path
 
-from codegraph_mcp.core.graph import GraphEngine
-from codegraph_mcp.core.parser import ASTParser, Entity, EntityType, Location, Relation, RelationType
+import pytest
+
 from codegraph_mcp.core.community import CommunityDetector
+from codegraph_mcp.core.graph import GraphEngine
 from codegraph_mcp.core.graphrag import GraphRAGSearch
+from codegraph_mcp.core.parser import (
+    Entity,
+    EntityType,
+    Location,
+    Relation,
+    RelationType,
+)
 
 
 @pytest.fixture
@@ -20,11 +27,11 @@ async def populated_engine():
     """Create a graph engine with test data."""
     with tempfile.TemporaryDirectory() as tmpdir:
         repo_path = Path(tmpdir)
-        
+
         # Create engine
         engine = GraphEngine(repo_path)
         await engine.initialize()
-        
+
         # Manually add test entities
         location1 = Location(
             file_path=repo_path / "auth" / "user.py",
@@ -33,7 +40,7 @@ async def populated_engine():
             end_line=20,
             end_column=0,
         )
-        
+
         user_class = Entity(
             id="auth/user.py::User",
             type=EntityType.CLASS,
@@ -44,7 +51,7 @@ async def populated_engine():
             signature="class User",
         )
         await engine.add_entity(user_class)
-        
+
         auth_method = Entity(
             id="auth/user.py::User::authenticate",
             type=EntityType.METHOD,
@@ -55,7 +62,7 @@ async def populated_engine():
             signature="def authenticate(self, password: str) -> bool",
         )
         await engine.add_entity(auth_method)
-        
+
         location2 = Location(
             file_path=repo_path / "data" / "processor.py",
             start_line=1,
@@ -63,7 +70,7 @@ async def populated_engine():
             end_line=30,
             end_column=0,
         )
-        
+
         processor_class = Entity(
             id="data/processor.py::DataProcessor",
             type=EntityType.CLASS,
@@ -74,7 +81,7 @@ async def populated_engine():
             signature="class DataProcessor",
         )
         await engine.add_entity(processor_class)
-        
+
         process_method = Entity(
             id="data/processor.py::DataProcessor::process",
             type=EntityType.METHOD,
@@ -85,7 +92,7 @@ async def populated_engine():
             signature="def process(self, data: Any) -> Any",
         )
         await engine.add_entity(process_method)
-        
+
         location3 = Location(
             file_path=repo_path / "utils" / "helpers.py",
             start_line=1,
@@ -93,7 +100,7 @@ async def populated_engine():
             end_line=15,
             end_column=0,
         )
-        
+
         validate_func = Entity(
             id="utils/helpers.py::validate_email",
             type=EntityType.FUNCTION,
@@ -104,7 +111,7 @@ async def populated_engine():
             signature="def validate_email(email: str) -> bool",
         )
         await engine.add_entity(validate_func)
-        
+
         # Add relations
         contains_rel = Relation(
             source_id="auth/user.py::User",
@@ -112,20 +119,20 @@ async def populated_engine():
             type=RelationType.CONTAINS,
         )
         await engine.add_relation(contains_rel)
-        
+
         contains_rel2 = Relation(
             source_id="data/processor.py::DataProcessor",
             target_id="data/processor.py::DataProcessor::process",
             type=RelationType.CONTAINS,
         )
         await engine.add_relation(contains_rel2)
-        
+
         # Detect communities
         detector = CommunityDetector(min_size=1)
         await detector.detect(engine)
-        
+
         yield engine
-        
+
         await engine.close()
 
 
@@ -139,9 +146,9 @@ class TestGraphRAGIntegration:
     ):
         """Test global search finds entities by topic."""
         search = GraphRAGSearch(populated_engine, use_llm=False)
-        
+
         result = await search.global_search("user authentication")
-        
+
         assert result.query == "user authentication"
         assert result.communities_searched >= 0
         # Should find User or UserManager related entities
@@ -155,9 +162,9 @@ class TestGraphRAGIntegration:
     ):
         """Test global search generates an answer."""
         search = GraphRAGSearch(populated_engine, use_llm=False)
-        
+
         result = await search.global_search("data processing")
-        
+
         assert result.answer  # Should have some answer
         assert isinstance(result.confidence, float)
         assert 0.0 <= result.confidence <= 1.0
@@ -173,14 +180,14 @@ class TestGraphRAGIntegration:
             "SELECT id FROM entities WHERE name = 'User' LIMIT 1"
         )
         row = await cursor.fetchone()
-        
+
         if row:
             search = GraphRAGSearch(populated_engine, use_llm=False)
             result = await search.local_search(
                 "how does authentication work",
                 row[0],
             )
-            
+
             assert result.start_entity == "User"
             assert isinstance(result.entities_searched, int)
 
@@ -191,12 +198,12 @@ class TestGraphRAGIntegration:
     ):
         """Test local search handles missing entity."""
         search = GraphRAGSearch(populated_engine, use_llm=False)
-        
+
         result = await search.local_search(
             "test query",
             "nonexistent_entity_id",
         )
-        
+
         assert "not found" in result.answer
         assert result.confidence == 0.0
 
@@ -214,7 +221,7 @@ class TestCommunityIntegration:
             "SELECT COUNT(*) FROM communities"
         )
         row = await cursor.fetchone()
-        
+
         # Should have detected at least one community
         assert row[0] >= 0
 
@@ -226,12 +233,12 @@ class TestCommunityIntegration:
         """Test that entities are assigned to communities."""
         cursor = await populated_engine._connection.execute(
             """
-            SELECT COUNT(*) FROM entities 
+            SELECT COUNT(*) FROM entities
             WHERE community_id IS NOT NULL
             """
         )
         row = await cursor.fetchone()
-        
+
         # At least some entities should be in communities
         assert row[0] >= 0
 
@@ -242,9 +249,9 @@ class TestCommunityIntegration:
     ):
         """Test global search leverages community summaries."""
         search = GraphRAGSearch(populated_engine, use_llm=False)
-        
+
         result = await search.global_search("user management")
-        
+
         # Should have searched communities
         assert isinstance(result.communities_searched, int)
         # Check that relevant communities are returned
@@ -263,12 +270,12 @@ class TestSemanticAnalysisIntegration:
     ):
         """Test entity descriptions can be generated."""
         from codegraph_mcp.core.semantic import SemanticAnalyzer
-        
+
         analyzer = SemanticAnalyzer(populated_engine)
-        
+
         # Get an entity
         entity = await populated_engine.get_entity("auth/user.py::User")
-        
+
         if entity:
             description = await analyzer.generate_description(entity)
             assert description  # Should generate some description
@@ -279,11 +286,11 @@ class TestSemanticAnalysisIntegration:
         populated_engine,
     ):
         """Test community summaries can be generated."""
-        from codegraph_mcp.core.semantic import SemanticAnalyzer
         from codegraph_mcp.core.community import Community
-        
+        from codegraph_mcp.core.semantic import SemanticAnalyzer
+
         analyzer = SemanticAnalyzer(populated_engine)
-        
+
         # Create a test community with valid entity IDs
         community = Community(
             id=999,
@@ -291,14 +298,14 @@ class TestSemanticAnalysisIntegration:
             name="Test Community",
             member_ids=["auth/user.py::User", "auth/user.py::User::authenticate"],
         )
-        
+
         # Get entities for the community
         entities = []
         for entity_id in community.member_ids:
             entity = await populated_engine.get_entity(entity_id)
             if entity:
                 entities.append(entity)
-        
+
         summary = await analyzer.generate_community_summary(community, entities)
         assert summary  # Should generate some summary
 
@@ -312,15 +319,15 @@ class TestPromptIntegration:
         populated_engine,
     ):
         """Test code review prompt has proper structure."""
-        from codegraph_mcp.mcp.prompts import _prompt_code_review
         from codegraph_mcp.config import Config
-        
+        from codegraph_mcp.mcp.prompts import _prompt_code_review
+
         # Get a valid entity ID
         cursor = await populated_engine._connection.execute(
             "SELECT id FROM entities WHERE type = 'class' LIMIT 1"
         )
         row = await cursor.fetchone()
-        
+
         if row:
             config = Config()
             result = await _prompt_code_review(
@@ -328,7 +335,7 @@ class TestPromptIntegration:
                 populated_engine,
                 config,
             )
-            
+
             assert len(result) > 0
             assert "Code Review" in result[0].content.text
 
@@ -338,16 +345,16 @@ class TestPromptIntegration:
         populated_engine,
     ):
         """Test explain codebase prompt generates context."""
-        from codegraph_mcp.mcp.prompts import _prompt_explain_codebase
         from codegraph_mcp.config import Config
-        
+        from codegraph_mcp.mcp.prompts import _prompt_explain_codebase
+
         config = Config()
         result = await _prompt_explain_codebase(
             {"depth": "overview"},
             populated_engine,
             config,
         )
-        
+
         assert len(result) > 0
         text = result[0].content.text
         assert "Statistics" in text or "Entities" in text
@@ -358,16 +365,16 @@ class TestPromptIntegration:
         populated_engine,
     ):
         """Test debug issue prompt."""
-        from codegraph_mcp.mcp.prompts import _prompt_debug_issue
         from codegraph_mcp.config import Config
-        
+        from codegraph_mcp.mcp.prompts import _prompt_debug_issue
+
         config = Config()
         result = await _prompt_debug_issue(
             {"error_message": "AttributeError: 'NoneType' has no attribute 'authenticate'"},
             populated_engine,
             config,
         )
-        
+
         assert len(result) > 0
         assert "Debug" in result[0].content.text
 
@@ -377,15 +384,15 @@ class TestPromptIntegration:
         populated_engine,
     ):
         """Test test generation prompt."""
-        from codegraph_mcp.mcp.prompts import _prompt_test_generation
         from codegraph_mcp.config import Config
-        
+        from codegraph_mcp.mcp.prompts import _prompt_test_generation
+
         # Get a valid entity ID
         cursor = await populated_engine._connection.execute(
             "SELECT id FROM entities WHERE type = 'function' LIMIT 1"
         )
         row = await cursor.fetchone()
-        
+
         if row:
             config = Config()
             result = await _prompt_test_generation(
@@ -393,6 +400,6 @@ class TestPromptIntegration:
                 populated_engine,
                 config,
             )
-            
+
             assert len(result) > 0
             assert "Test" in result[0].content.text

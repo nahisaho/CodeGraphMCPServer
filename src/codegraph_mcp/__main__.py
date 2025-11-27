@@ -234,10 +234,10 @@ def cmd_start(args: argparse.Namespace) -> int:
     """Handle start command - Start server in background."""
     pid_file = get_pid_file()
     log_file = get_log_file()
-    
+
     # Ensure directory exists
     pid_file.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Check if already running
     if pid_file.exists():
         try:
@@ -248,7 +248,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         except (ProcessLookupError, ValueError):
             # Process not running, remove stale PID file
             pid_file.unlink()
-    
+
     # Build command
     cmd = [
         sys.executable, "-m", "codegraph_mcp",
@@ -257,19 +257,19 @@ def cmd_start(args: argparse.Namespace) -> int:
         "--transport", args.transport,
         "--port", str(args.port),
     ]
-    
+
     # Start server in background
-    with open(log_file, "w") as log:
+    with log_file.open("w") as log:
         process = subprocess.Popen(
             cmd,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
-    
+
     # Write PID file
     pid_file.write_text(str(process.pid))
-    
+
     print("\u2705 Server started in background")
     print(f"   PID: {process.pid}")
     print(f"   Repository: {args.repo.resolve()}")
@@ -278,22 +278,22 @@ def cmd_start(args: argparse.Namespace) -> int:
         print(f"   URL: http://localhost:{args.port}")
     print(f"   Log: {log_file}")
     print("\nUse 'codegraph-mcp stop' to stop the server")
-    
+
     return 0
 
 
 def cmd_stop(args: argparse.Namespace) -> int:
     """Handle stop command - Stop background server."""
     pid_file = get_pid_file()
-    
+
     if not pid_file.exists():
         print("No server is running")
         return 1
-    
+
     try:
         pid = int(pid_file.read_text().strip())
         os.kill(pid, signal.SIGTERM)
-        
+
         # Wait for process to terminate
         import time
         for _ in range(10):
@@ -302,11 +302,11 @@ def cmd_stop(args: argparse.Namespace) -> int:
                 time.sleep(0.5)
             except ProcessLookupError:
                 break
-        
+
         pid_file.unlink()
         print(f"✅ Server stopped (PID: {pid})")
         return 0
-        
+
     except ProcessLookupError:
         pid_file.unlink()
         print("Server was not running (stale PID file removed)")
@@ -321,19 +321,19 @@ def cmd_status(args: argparse.Namespace) -> int:
     """Handle status command - Check server status."""
     pid_file = get_pid_file()
     log_file = get_log_file()
-    
+
     if not pid_file.exists():
         print("❌ Server is not running")
         return 1
-    
+
     try:
         pid = int(pid_file.read_text().strip())
         os.kill(pid, 0)  # Check if process exists
-        
+
         print("\u2705 Server is running")
         print(f"   PID: {pid}")
         print(f"   Log: {log_file}")
-        
+
         # Show last few log lines if available
         if log_file.exists():
             lines = log_file.read_text().strip().split("\n")
@@ -341,9 +341,9 @@ def cmd_status(args: argparse.Namespace) -> int:
                 print("\nRecent logs:")
                 for line in lines[-5:]:
                     print(f"   {line}")
-        
+
         return 0
-        
+
     except ProcessLookupError:
         pid_file.unlink()
         print("❌ Server is not running (stale PID file removed)")
@@ -379,10 +379,10 @@ def cmd_index(args: argparse.Namespace) -> int:
         try:
             from rich.console import Console
             from rich.progress import (
-                Progress,
-                TextColumn,
                 BarColumn,
+                Progress,
                 TaskProgressColumn,
+                TextColumn,
                 TimeElapsedColumn,
             )
             from rich.table import Table
@@ -442,8 +442,8 @@ def cmd_index(args: argparse.Namespace) -> int:
                 # Run community detection if enabled
                 community_result = None
                 if run_community and result.success:
-                    from codegraph_mcp.core.graph import GraphEngine
                     from codegraph_mcp.core.community import CommunityDetector
+                    from codegraph_mcp.core.graph import GraphEngine
 
                     engine = GraphEngine(args.path)
                     await engine.initialize()
@@ -533,8 +533,8 @@ def cmd_index(args: argparse.Namespace) -> int:
 
             # Run community detection if enabled
             if run_community and result.success:
-                from codegraph_mcp.core.graph import GraphEngine
                 from codegraph_mcp.core.community import CommunityDetector
+                from codegraph_mcp.core.graph import GraphEngine
 
                 engine = GraphEngine(args.path)
                 await engine.initialize()
@@ -632,8 +632,8 @@ def cmd_community(args: argparse.Namespace) -> int:
     """Handle community command."""
     import asyncio
 
-    from codegraph_mcp.core.graph import GraphEngine
     from codegraph_mcp.core.community import CommunityDetector
+    from codegraph_mcp.core.graph import GraphEngine
 
     async def _community() -> int:
         engine = GraphEngine(args.path)
@@ -681,7 +681,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
     import time
 
     try:
-        from watchfiles import awatch, Change
+        from watchfiles import Change, awatch
     except ImportError:
         print("Error: watchfiles is required for watch command")
         print("Install with: pip install watchfiles")
@@ -749,8 +749,8 @@ def cmd_watch(args: argparse.Namespace) -> int:
 
             # Run community detection if enabled
             if args.community and result.success:
-                from codegraph_mcp.core.graph import GraphEngine
                 from codegraph_mcp.core.community import CommunityDetector
+                from codegraph_mcp.core.graph import GraphEngine
 
                 engine = GraphEngine(repo_path)
                 await engine.initialize()
@@ -837,7 +837,7 @@ def main() -> int:
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
-    
+
     parser.print_help()
     return 0
 

@@ -7,8 +7,6 @@ ASTパーサーの単体テスト。
 
 from pathlib import Path
 
-import pytest
-
 from codegraph_mcp.core.parser import (
     ASTParser,
     Entity,
@@ -50,13 +48,13 @@ class Greeter:
     def greet(self):
         return hello("World")
 ''')
-        
+
         parser = ASTParser()
         result = parser.parse_file(test_file)
-        
+
         assert result.success
         assert len(result.entities) >= 3  # module, function, class
-        
+
         # Check entity types
         types = {e.type for e in result.entities}
         assert EntityType.MODULE in types
@@ -77,10 +75,10 @@ class UserService {
     }
 }
 ''')
-        
+
         parser = ASTParser()
         result = parser.parse_file(test_file)
-        
+
         assert result.success
         types = {e.type for e in result.entities}
         assert EntityType.INTERFACE in types
@@ -94,10 +92,10 @@ def documented_func():
     """This is a docstring."""
     pass
 ''')
-        
+
         parser = ASTParser()
         result = parser.parse_file(test_file)
-        
+
         funcs = [e for e in result.entities if e.type == EntityType.FUNCTION]
         assert len(funcs) == 1
         # docstring extraction depends on implementation
@@ -112,10 +110,10 @@ from pathlib import Path
 def func():
     pass
 ''')
-        
+
         parser = ASTParser()
         result = parser.parse_file(test_file)
-        
+
         imports = [r for r in result.relations if r.type == RelationType.IMPORTS]
         assert len(imports) >= 2
 
@@ -129,10 +127,10 @@ class Base:
 class Child(Base):
     pass
 ''')
-        
+
         parser = ASTParser()
         result = parser.parse_file(test_file)
-        
+
         inherits = [r for r in result.relations if r.type == RelationType.INHERITS]
         assert len(inherits) >= 1
 
@@ -140,10 +138,10 @@ class Child(Base):
         """非対応ファイル形式のテスト"""
         test_file = temp_dir / "test.txt"
         test_file.write_text("Hello World")
-        
+
         parser = ASTParser()
         result = parser.parse_file(test_file)
-        
+
         assert not result.success
         assert len(result.errors) == 1
 
@@ -151,13 +149,13 @@ class Child(Base):
         """複数ファイルのパーステスト"""
         file1 = temp_dir / "a.py"
         file1.write_text("def func_a(): pass")
-        
+
         file2 = temp_dir / "b.py"
         file2.write_text("def func_b(): pass")
-        
+
         parser = ASTParser()
         result = parser.parse_files([file1, file2])
-        
+
         assert result.success
         names = {e.name for e in result.entities}
         assert "func_a" in names
@@ -176,7 +174,7 @@ class TestEntity:
             end_line=20,
             end_column=0,
         )
-        
+
         entity = Entity(
             id="test_id",
             type=EntityType.FUNCTION,
@@ -186,7 +184,7 @@ class TestEntity:
             signature="def test_func()",
             docstring="Test function",
         )
-        
+
         assert entity.id == "test_id"
         assert entity.type == EntityType.FUNCTION
         assert entity.name == "test_func"
@@ -203,7 +201,7 @@ class TestEntity:
             end_line=5,
             end_column=0,
         )
-        
+
         entity = Entity(
             id="test_id",
             type=EntityType.CLASS,
@@ -212,7 +210,7 @@ class TestEntity:
             location=location,
             metadata={"visibility": "public", "abstract": False},
         )
-        
+
         assert entity.metadata["visibility"] == "public"
         assert entity.metadata["abstract"] is False
 
@@ -228,7 +226,7 @@ class TestRelation:
             type=RelationType.CALLS,
             weight=1.0,
         )
-        
+
         assert relation.source_id == "source_entity"
         assert relation.target_id == "target_entity"
         assert relation.type == RelationType.CALLS
@@ -242,7 +240,7 @@ class TestRelation:
             type=RelationType.INHERITS,
             metadata={"line": 10, "column": 5},
         )
-        
+
         assert relation.metadata["line"] == 10
 
 
@@ -265,20 +263,20 @@ class TestParseResult:
             end_line=5,
             end_column=0,
         )
-        
+
         result1 = ParseResult(
             entities=[Entity(
                 id="e1", type=EntityType.FUNCTION, name="func1",
                 qualified_name="func1", location=location,
             )],
         )
-        
+
         result2 = ParseResult(
             entities=[Entity(
                 id="e2", type=EntityType.FUNCTION, name="func2",
                 qualified_name="func2", location=location,
             )],
         )
-        
+
         merged = result1.merge(result2)
         assert len(merged.entities) == 2

@@ -30,17 +30,18 @@ class TestGoExtractor:
             import tree_sitter_go as ts_go
         except ImportError:
             pytest.skip("tree-sitter-go not installed")
-        
-        from codegraph_mcp.languages.go import GoExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.go import GoExtractor
+
         # Initialize parser
         go_lang = ts.Language(ts_go.language())
         parser = ts.Parser(go_lang)
-        
+
         # Parse source
         tree = parser.parse(go_source.encode())
-        
+
         # Extract entities
         extractor = GoExtractor()
         return extractor.extract(tree, GO_FIXTURE_PATH, go_source)
@@ -55,7 +56,7 @@ class TestGoExtractor:
         """Test function extraction."""
         functions = [e for e in parse_result.entities if e.type == EntityType.FUNCTION]
         func_names = {f.name for f in functions}
-        
+
         # Check expected functions
         assert "Add" in func_names
         assert "Subtract" in func_names
@@ -68,7 +69,7 @@ class TestGoExtractor:
         """Test struct extraction."""
         structs = [e for e in parse_result.entities if e.type == EntityType.STRUCT]
         struct_names = {s.name for s in structs}
-        
+
         assert "Calculator" in struct_names
         assert "AddOperation" in struct_names
 
@@ -76,19 +77,19 @@ class TestGoExtractor:
         """Test interface extraction."""
         interfaces = [e for e in parse_result.entities if e.type == EntityType.INTERFACE]
         interface_names = {i.name for i in interfaces}
-        
+
         assert "Operation" in interface_names
 
     def test_method_extraction(self, parse_result):
         """Test method extraction."""
         methods = [e for e in parse_result.entities if e.type == EntityType.METHOD]
         method_names = {m.name for m in methods}
-        
+
         # Calculator methods
         assert "Calculate" in method_names
         assert "Clear" in method_names
         assert "GetHistory" in method_names
-        
+
         # AddOperation methods
         assert "Execute" in method_names
         assert "Name" in method_names
@@ -96,7 +97,7 @@ class TestGoExtractor:
     def test_method_receiver_in_qualified_name(self, parse_result):
         """Test that methods include receiver type in qualified name."""
         methods = [e for e in parse_result.entities if e.type == EntityType.METHOD]
-        
+
         calculate_method = next((m for m in methods if m.name == "Calculate"), None)
         assert calculate_method is not None
         assert "Calculator" in calculate_method.qualified_name
@@ -105,17 +106,17 @@ class TestGoExtractor:
         """Test import relation extraction."""
         imports = [r for r in parse_result.relations if r.type == RelationType.IMPORTS]
         import_targets = {r.target_id for r in imports}
-        
+
         assert "module::fmt" in import_targets
         assert "module::math" in import_targets
 
     def test_call_relations(self, parse_result):
         """Test function call relation extraction."""
         calls = [r for r in parse_result.relations if r.type == RelationType.CALLS]
-        
+
         # Should have calls to math.Sqrt, fmt.Printf, etc.
         call_targets = {r.target_id for r in calls}
-        
+
         # Check for some expected calls
         assert any("math.Sqrt" in t or "Sqrt" in t for t in call_targets)
         assert any("fmt.Printf" in t or "Printf" in t for t in call_targets)
@@ -123,14 +124,14 @@ class TestGoExtractor:
     def test_contains_relations(self, parse_result):
         """Test that contains relations link module to entities."""
         contains = [r for r in parse_result.relations if r.type == RelationType.CONTAINS]
-        
+
         # Module should contain functions, structs, interfaces
         assert len(contains) > 0
 
     def test_function_signature(self, parse_result):
         """Test function signature extraction."""
         functions = [e for e in parse_result.entities if e.type == EntityType.FUNCTION]
-        
+
         add_func = next((f for f in functions if f.name == "Add"), None)
         assert add_func is not None
         assert add_func.signature is not None
@@ -146,7 +147,7 @@ class TestGoExtractor:
     def test_source_code_captured(self, parse_result):
         """Test that source code is captured for entities."""
         functions = [e for e in parse_result.entities if e.type == EntityType.FUNCTION]
-        
+
         add_func = next((f for f in functions if f.name == "Add"), None)
         assert add_func is not None
         assert add_func.source_code is not None
@@ -162,19 +163,20 @@ class TestGoExtractorEdgeCases:
             import tree_sitter_go as ts_go
         except ImportError:
             pytest.skip("tree-sitter-go not installed")
-        
-        from codegraph_mcp.languages.go import GoExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.go import GoExtractor
+
         go_lang = ts.Language(ts_go.language())
         parser = ts.Parser(go_lang)
-        
+
         source = "package main\n"
         tree = parser.parse(source.encode())
-        
+
         extractor = GoExtractor()
         result = extractor.extract(tree, Path("empty.go"), source)
-        
+
         # Should have module entity
         assert len(result.entities) >= 1
         assert result.entities[0].type == EntityType.MODULE
@@ -185,13 +187,14 @@ class TestGoExtractorEdgeCases:
             import tree_sitter_go as ts_go
         except ImportError:
             pytest.skip("tree-sitter-go not installed")
-        
-        from codegraph_mcp.languages.go import GoExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.go import GoExtractor
+
         go_lang = ts.Language(ts_go.language())
         parser = ts.Parser(go_lang)
-        
+
         source = '''package main
 
 func main() {
@@ -199,10 +202,10 @@ func main() {
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = GoExtractor()
         result = extractor.extract(tree, Path("main.go"), source)
-        
+
         functions = [e for e in result.entities if e.type == EntityType.FUNCTION]
         assert len(functions) == 1
         assert functions[0].name == "main"
@@ -213,13 +216,14 @@ func main() {
             import tree_sitter_go as ts_go
         except ImportError:
             pytest.skip("tree-sitter-go not installed")
-        
-        from codegraph_mcp.languages.go import GoExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.go import GoExtractor
+
         go_lang = ts.Language(ts_go.language())
         parser = ts.Parser(go_lang)
-        
+
         source = '''package main
 
 type Counter struct {
@@ -231,10 +235,10 @@ func (c *Counter) Increment() {
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = GoExtractor()
         result = extractor.extract(tree, Path("counter.go"), source)
-        
+
         methods = [e for e in result.entities if e.type == EntityType.METHOD]
         assert len(methods) == 1
         assert methods[0].name == "Increment"

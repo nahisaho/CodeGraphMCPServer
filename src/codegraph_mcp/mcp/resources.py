@@ -10,14 +10,14 @@ Design Reference: design-mcp-interface.md §3
 from typing import Any
 
 from mcp.server import Server
-from mcp.types import Resource, TextResourceContents
+from mcp.types import Resource
 
 from codegraph_mcp.config import Config
 
 
 def register(server: Server, config: Config) -> None:
     """Register all MCP resources with the server."""
-    
+
     @server.list_resources()
     async def list_resources() -> list[Resource]:
         """Return list of available resources."""
@@ -47,17 +47,17 @@ def register(server: Server, config: Config) -> None:
                 mimeType="application/json",
             ),
         ]
-    
+
     @server.read_resource()
     async def read_resource(uri: str) -> str:
         """Read resource content."""
         import json
-        
+
         from codegraph_mcp.core.graph import GraphEngine
-        
+
         engine = GraphEngine(config.repo_path)
         await engine.initialize()
-        
+
         try:
             result = await _dispatch_resource(uri, engine)
             return json.dumps(result, indent=2)
@@ -67,36 +67,36 @@ def register(server: Server, config: Config) -> None:
 
 async def _dispatch_resource(uri: str, engine: Any) -> dict[str, Any]:
     """Dispatch resource request to appropriate handler."""
-    
+
     if uri.startswith("codegraph://entities/"):
         entity_id = uri.split("/")[-1]
         return await _read_entity(entity_id, engine)
-    
+
     elif uri.startswith("codegraph://files/"):
         file_path = "/".join(uri.split("/")[3:])
         return await _read_file_graph(file_path, engine)
-    
+
     elif uri.startswith("codegraph://communities/"):
         community_id = int(uri.split("/")[-1])
         return await _read_community(community_id, engine)
-    
+
     elif uri == "codegraph://stats":
         return await _read_stats(engine)
-    
+
     return {"error": f"Unknown resource: {uri}"}
 
 
 async def _read_entity(entity_id: str, engine: Any) -> dict[str, Any]:
     """Read entity resource (REQ-RSC-001)."""
     entity = await engine.get_entity(entity_id)
-    
+
     if not entity:
         return {"error": "Entity not found", "entity_id": entity_id}
-    
+
     # Get related entities
     callers = await engine.find_callers(entity_id)
     callees = await engine.find_callees(entity_id)
-    
+
     return {
         "entity": {
             "id": entity.id,
@@ -129,7 +129,7 @@ async def _read_file_graph(file_path: str, engine: Any) -> dict[str, Any]:
         (f"%{file_path}",),
     )
     rows = await cursor.fetchall()
-    
+
     entities = [
         {
             "id": row[0],
@@ -141,7 +141,7 @@ async def _read_file_graph(file_path: str, engine: Any) -> dict[str, Any]:
         }
         for row in rows
     ]
-    
+
     # Get relations within file
     entity_ids = [e["id"] for e in entities]
     if entity_ids:
@@ -160,7 +160,7 @@ async def _read_file_graph(file_path: str, engine: Any) -> dict[str, Any]:
         ]
     else:
         relations = []
-    
+
     return {
         "file_path": file_path,
         "entities": entities,
@@ -177,10 +177,10 @@ async def _read_community(community_id: int, engine: Any) -> dict[str, Any]:
         (community_id,),
     )
     row = await cursor.fetchone()
-    
+
     if not row:
         return {"error": "Community not found", "community_id": community_id}
-    
+
     # Get member entities
     cursor = await engine._connection.execute(
         """
@@ -194,7 +194,7 @@ async def _read_community(community_id: int, engine: Any) -> dict[str, Any]:
         {"id": r[0], "type": r[1], "name": r[2], "file": r[3]}
         for r in await cursor.fetchall()
     ]
-    
+
     return {
         "community": {
             "id": row[0],
@@ -210,7 +210,7 @@ async def _read_community(community_id: int, engine: Any) -> dict[str, Any]:
 async def _read_stats(engine: Any) -> dict[str, Any]:
     """Read graph statistics resource (REQ-RSC-004)."""
     stats = await engine.get_statistics()
-    
+
     return {
         "statistics": {
             "entities": stats.entity_count,

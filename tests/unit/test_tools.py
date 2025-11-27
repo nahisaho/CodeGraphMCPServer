@@ -5,9 +5,8 @@ MCP Tools Unit Tests
 MCPツールの単体テスト。
 """
 
-import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -62,8 +61,9 @@ class TestToolRegistration:
 
     def test_tool_list_returns_14_tools(self):
         """Verify 14 tools are defined."""
-        from codegraph_mcp.mcp.tools import register
         from mcp.server import Server
+
+        from codegraph_mcp.mcp.tools import register
 
         server = Server("test")
         config = Config(repo_path=Path("/tmp"))

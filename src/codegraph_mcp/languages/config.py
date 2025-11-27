@@ -9,22 +9,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from codegraph_mcp.core.parser import ParseResult, Entity, Relation
+from codegraph_mcp.core.parser import ParseResult
 
 
 @dataclass
 class LanguageConfig:
     """Configuration for a supported language."""
-    
+
     name: str
     extensions: list[str]
     tree_sitter_name: str
-    
+
     # Node types to extract as entities
     function_nodes: list[str]
     class_nodes: list[str]
     import_nodes: list[str]
-    
+
     # Optional node types
     interface_nodes: list[str] | None = None
     module_nodes: list[str] | None = None
@@ -33,12 +33,12 @@ class LanguageConfig:
 class BaseExtractor(ABC):
     """
     Base class for language-specific entity extraction.
-    
+
     Subclasses implement language-specific extraction logic.
     """
-    
+
     config: LanguageConfig
-    
+
     @abstractmethod
     def extract(
         self,
@@ -48,17 +48,17 @@ class BaseExtractor(ABC):
     ) -> ParseResult:
         """
         Extract entities and relations from an AST.
-        
+
         Args:
             tree: Tree-sitter parse tree
             file_path: Path to the source file
             source_code: Original source code
-            
+
         Returns:
             ParseResult with entities and relations
         """
         pass
-    
+
     def _generate_entity_id(
         self,
         file_path: Path,
@@ -67,28 +67,28 @@ class BaseExtractor(ABC):
     ) -> str:
         """Generate unique entity ID."""
         return f"{file_path}::{name}::{line}"
-    
+
     def _get_node_text(self, node: Any, source_code: str) -> str:
         """Get text content of a node."""
         return source_code[node.start_byte:node.end_byte]
-    
+
     def _get_docstring(self, node: Any, source_code: str) -> str | None:
         """Extract docstring from a node if present."""
         # Check first child for string literal (common docstring pattern)
         if node.child_count > 0:
             body = None
             for child in node.children:
-                if child.type == "block" or child.type == "statement_block":
+                if child.type in {"block", "statement_block"}:
                     body = child
                     break
-            
+
             if body and body.child_count > 0:
                 first_stmt = body.children[0]
                 if first_stmt.type in ("expression_statement", "string"):
                     string_node = first_stmt
                     if first_stmt.type == "expression_statement":
                         string_node = first_stmt.children[0] if first_stmt.child_count > 0 else None
-                    
+
                     if string_node and string_node.type == "string":
                         text = self._get_node_text(string_node, source_code)
                         # Strip quotes
@@ -96,7 +96,7 @@ class BaseExtractor(ABC):
                             return text[3:-3].strip()
                         elif text.startswith('"') or text.startswith("'"):
                             return text[1:-1].strip()
-        
+
         return None
 
 

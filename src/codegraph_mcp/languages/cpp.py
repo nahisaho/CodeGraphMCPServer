@@ -28,7 +28,7 @@ from codegraph_mcp.languages.config import (
 class CppExtractor(BaseExtractor):
     """
     C++-specific entity and relation extractor.
-    
+
     Extracts:
     - Classes (class)
     - Structs (struct)
@@ -37,10 +37,10 @@ class CppExtractor(BaseExtractor):
     - Namespaces (namespace)
     - Include statements
     - Templates
-    
+
     Requirements: REQ-AST-007
     """
-    
+
     config = LanguageConfig(
         name="cpp",
         extensions=[".cpp", ".cc", ".cxx", ".hpp", ".h", ".hxx"],
@@ -50,7 +50,7 @@ class CppExtractor(BaseExtractor):
         import_nodes=["preproc_include"],
         interface_nodes=[],
     )
-    
+
     def extract(
         self,
         tree: Any,
@@ -60,11 +60,11 @@ class CppExtractor(BaseExtractor):
         """Extract entities and relations from C++ AST."""
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         # Use filename as module
         module_name = file_path.stem
         module_id = self._generate_entity_id(file_path, module_name, 1)
-        
+
         entities.append(Entity(
             id=module_id,
             type=EntityType.MODULE,
@@ -78,10 +78,10 @@ class CppExtractor(BaseExtractor):
                 end_column=0,
             ),
         ))
-        
+
         # Track current namespace
         self._current_namespace: list[str] = []
-        
+
         # Walk the tree
         self._walk_tree(
             tree.root_node,
@@ -91,9 +91,9 @@ class CppExtractor(BaseExtractor):
             relations,
             module_id,
         )
-        
+
         return ParseResult(entities=entities, relations=relations)
-    
+
     def _walk_tree(
         self,
         node: Any,
@@ -104,7 +104,7 @@ class CppExtractor(BaseExtractor):
         parent_id: str,
     ) -> None:
         """Recursively walk the AST tree."""
-        
+
         if node.type == "function_definition":
             entity = self._extract_function(node, file_path, source_code)
             if entity:
@@ -115,7 +115,7 @@ class CppExtractor(BaseExtractor):
                     type=RelationType.CONTAINS,
                 ))
                 self._extract_calls(node, file_path, source_code, entity.id, relations)
-        
+
         elif node.type == "class_specifier":
             entity = self._extract_class(node, file_path, source_code)
             if entity:
@@ -129,7 +129,7 @@ class CppExtractor(BaseExtractor):
                 self._extract_class_members(
                     node, file_path, source_code, entities, relations, entity.id
                 )
-        
+
         elif node.type == "struct_specifier":
             entity = self._extract_struct(node, file_path, source_code)
             if entity:
@@ -142,16 +142,16 @@ class CppExtractor(BaseExtractor):
                 self._extract_class_members(
                     node, file_path, source_code, entities, relations, entity.id
                 )
-        
+
         elif node.type == "namespace_definition":
             self._process_namespace(
                 node, file_path, source_code, entities, relations, parent_id
             )
             return  # Namespace handles its own children
-        
+
         elif node.type == "preproc_include":
             self._extract_include(node, source_code, parent_id, relations)
-        
+
         # Recurse (but not into class bodies - handled separately)
         if node.type not in ("class_specifier", "struct_specifier"):
             for child in node.children:
@@ -159,7 +159,7 @@ class CppExtractor(BaseExtractor):
                     child, file_path, source_code,
                     entities, relations, parent_id,
                 )
-    
+
     def _process_namespace(
         self,
         node: Any,
@@ -172,16 +172,16 @@ class CppExtractor(BaseExtractor):
         """Process namespace and its contents."""
         ns_name = None
         body = None
-        
+
         for child in node.children:
             if child.type in ("identifier", "namespace_identifier"):
                 ns_name = self._get_node_text(child, source_code)
             elif child.type == "declaration_list":
                 body = child
-        
+
         if ns_name:
             self._current_namespace.append(ns_name)
-        
+
         # Process namespace body
         if body:
             for child in body.children:
@@ -189,16 +189,16 @@ class CppExtractor(BaseExtractor):
                     child, file_path, source_code,
                     entities, relations, parent_id,
                 )
-        
+
         if ns_name:
             self._current_namespace.pop()
-    
+
     def _get_qualified_name(self, name: str) -> str:
         """Get fully qualified name with namespace."""
         if self._current_namespace:
             return "::".join(self._current_namespace) + "::" + name
         return name
-    
+
     def _extract_function(
         self,
         node: Any,
@@ -207,7 +207,7 @@ class CppExtractor(BaseExtractor):
     ) -> Entity | None:
         """Extract function entity."""
         name = None
-        
+
         for child in node.children:
             if child.type == "function_declarator":
                 for decl_child in child.children:
@@ -218,14 +218,14 @@ class CppExtractor(BaseExtractor):
                         # Method defined outside class
                         name = self._get_node_text(decl_child, source_code)
                         break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{self._get_qualified_name(name)}"
         signature = self._extract_function_signature(node, name, source_code)
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.FUNCTION,
@@ -242,7 +242,7 @@ class CppExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_class(
         self,
         node: Any,
@@ -255,13 +255,13 @@ class CppExtractor(BaseExtractor):
             if child.type == "type_identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{self._get_qualified_name(name)}"
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.CLASS,
@@ -277,7 +277,7 @@ class CppExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_struct(
         self,
         node: Any,
@@ -290,13 +290,13 @@ class CppExtractor(BaseExtractor):
             if child.type == "type_identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{self._get_qualified_name(name)}"
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.STRUCT,
@@ -312,7 +312,7 @@ class CppExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_class_members(
         self,
         node: Any,
@@ -349,7 +349,7 @@ class CppExtractor(BaseExtractor):
                                         type=RelationType.CONTAINS,
                                     ))
                                 break
-    
+
     def _extract_method(
         self,
         node: Any,
@@ -358,21 +358,21 @@ class CppExtractor(BaseExtractor):
     ) -> Entity | None:
         """Extract method entity from function_definition inside class."""
         name = None
-        
+
         for child in node.children:
             if child.type == "function_declarator":
                 for decl_child in child.children:
                     if decl_child.type in ("identifier", "field_identifier"):
                         name = self._get_node_text(decl_child, source_code)
                         break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{name}"
         signature = self._extract_function_signature(node, name, source_code)
         docstring = self._extract_doc_comment(node, source_code)
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.METHOD,
@@ -389,7 +389,7 @@ class CppExtractor(BaseExtractor):
             docstring=docstring,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_method_declaration(
         self,
         node: Any,
@@ -398,20 +398,20 @@ class CppExtractor(BaseExtractor):
     ) -> Entity | None:
         """Extract method entity from declaration (header only)."""
         name = None
-        
+
         for child in node.children:
             if child.type == "function_declarator":
                 for decl_child in child.children:
                     if decl_child.type in ("identifier", "field_identifier"):
                         name = self._get_node_text(decl_child, source_code)
                         break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{name}"
         signature = self._get_node_text(node, source_code).rstrip(";")
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.METHOD,
@@ -427,7 +427,7 @@ class CppExtractor(BaseExtractor):
             signature=signature,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_base_classes(
         self,
         node: Any,
@@ -446,7 +446,7 @@ class CppExtractor(BaseExtractor):
                             target_id=f"unresolved::{base_name}",
                             type=RelationType.INHERITS,
                         ))
-    
+
     def _extract_include(
         self,
         node: Any,
@@ -465,7 +465,7 @@ class CppExtractor(BaseExtractor):
                     target_id=f"module::{include_path}",
                     type=RelationType.IMPORTS,
                 ))
-    
+
     def _extract_calls(
         self,
         node: Any,
@@ -506,10 +506,10 @@ class CppExtractor(BaseExtractor):
                         type=RelationType.CALLS,
                     ))
                     break
-        
+
         for child in node.children:
             self._extract_calls(child, file_path, source_code, caller_id, relations)
-    
+
     def _extract_function_signature(
         self,
         node: Any,
@@ -519,7 +519,7 @@ class CppExtractor(BaseExtractor):
         """Extract function signature."""
         return_type = ""
         params = ""
-        
+
         for child in node.children:
             if child.type in ("primitive_type", "type_identifier", "qualified_identifier"):
                 return_type = self._get_node_text(child, source_code)
@@ -527,9 +527,9 @@ class CppExtractor(BaseExtractor):
                 for decl_child in child.children:
                     if decl_child.type == "parameter_list":
                         params = self._get_node_text(decl_child, source_code)
-        
+
         return f"{return_type} {name}{params}"
-    
+
     def _extract_doc_comment(self, node: Any, source_code: str) -> str | None:
         """Extract doxygen-style comment."""
         return None

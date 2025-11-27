@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from codegraph_mcp.core.parser import (
-    ParseResult,
     Entity,
-    Relation,
-    Location,
     EntityType,
+    Location,
+    ParseResult,
+    Relation,
     RelationType,
 )
 from codegraph_mcp.languages.config import (
@@ -28,17 +28,17 @@ from codegraph_mcp.languages.config import (
 class TypeScriptExtractor(BaseExtractor):
     """
     TypeScript-specific entity and relation extractor.
-    
+
     Extracts:
     - Functions and arrow functions
     - Classes and interfaces
     - Methods
     - Import relations
     - Call relations
-    
+
     Requirements: REQ-AST-002
     """
-    
+
     config = LanguageConfig(
         name="typescript",
         extensions=[".ts", ".tsx", ".js", ".jsx"],
@@ -52,7 +52,7 @@ class TypeScriptExtractor(BaseExtractor):
         import_nodes=["import_statement"],
         interface_nodes=["interface_declaration"],
     )
-    
+
     def extract(
         self,
         tree: Any,
@@ -62,11 +62,11 @@ class TypeScriptExtractor(BaseExtractor):
         """Extract entities and relations from TypeScript AST."""
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         # Create module entity
         module_name = file_path.stem
         module_id = self._generate_entity_id(file_path, module_name, 1)
-        
+
         entities.append(Entity(
             id=module_id,
             type=EntityType.MODULE,
@@ -80,11 +80,11 @@ class TypeScriptExtractor(BaseExtractor):
                 end_column=0,
             ),
         ))
-        
+
         # Track current class context
         self._current_class: str | None = None
         self._current_class_id: str | None = None
-        
+
         # Walk the tree
         self._walk_tree(
             tree.root_node,
@@ -94,9 +94,9 @@ class TypeScriptExtractor(BaseExtractor):
             relations,
             module_id,
         )
-        
+
         return ParseResult(entities=entities, relations=relations)
-    
+
     def _walk_tree(
         self,
         node: Any,
@@ -107,7 +107,7 @@ class TypeScriptExtractor(BaseExtractor):
         parent_id: str,
     ) -> None:
         """Recursively walk the AST tree."""
-        
+
         if node.type == "function_declaration":
             entity = self._extract_function(node, file_path, source_code)
             if entity:
@@ -120,7 +120,7 @@ class TypeScriptExtractor(BaseExtractor):
                 self._extract_calls(
                     node, file_path, source_code, entity.id, relations
                 )
-        
+
         elif node.type == "class_declaration":
             entity = self._extract_class(node, file_path, source_code)
             if entity:
@@ -130,29 +130,29 @@ class TypeScriptExtractor(BaseExtractor):
                     target_id=entity.id,
                     type=RelationType.CONTAINS,
                 ))
-                
+
                 # Extract inheritance/implements
                 self._extract_class_relations(
                     node, file_path, source_code, entity.id, relations
                 )
-                
+
                 # Process class body
                 old_class = self._current_class
                 old_class_id = self._current_class_id
                 self._current_class = entity.name
                 self._current_class_id = entity.id
-                
+
                 for child in node.children:
                     if child.type == "class_body":
                         self._walk_tree(
                             child, file_path, source_code,
                             entities, relations, entity.id,
                         )
-                
+
                 self._current_class = old_class
                 self._current_class_id = old_class_id
                 return
-        
+
         elif node.type == "interface_declaration":
             entity = self._extract_interface(node, file_path, source_code)
             if entity:
@@ -162,7 +162,7 @@ class TypeScriptExtractor(BaseExtractor):
                     target_id=entity.id,
                     type=RelationType.CONTAINS,
                 ))
-        
+
         elif node.type == "method_definition":
             entity = self._extract_method(node, file_path, source_code)
             if entity:
@@ -175,19 +175,19 @@ class TypeScriptExtractor(BaseExtractor):
                 self._extract_calls(
                     node, file_path, source_code, entity.id, relations
                 )
-        
+
         elif node.type == "import_statement":
             self._extract_import(
                 node, file_path, source_code, parent_id, relations
             )
-        
+
         # Recurse
         for child in node.children:
             self._walk_tree(
                 child, file_path, source_code,
                 entities, relations, parent_id,
             )
-    
+
     def _extract_function(
         self,
         node: Any,
@@ -200,10 +200,10 @@ class TypeScriptExtractor(BaseExtractor):
             if child.type == "identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.FUNCTION,
@@ -218,7 +218,7 @@ class TypeScriptExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_class(
         self,
         node: Any,
@@ -228,13 +228,13 @@ class TypeScriptExtractor(BaseExtractor):
         """Extract class entity."""
         name = None
         for child in node.children:
-            if child.type == "type_identifier" or child.type == "identifier":
+            if child.type in {"type_identifier", "identifier"}:
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.CLASS,
@@ -249,7 +249,7 @@ class TypeScriptExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_interface(
         self,
         node: Any,
@@ -259,13 +259,13 @@ class TypeScriptExtractor(BaseExtractor):
         """Extract interface entity."""
         name = None
         for child in node.children:
-            if child.type == "type_identifier" or child.type == "identifier":
+            if child.type in {"type_identifier", "identifier"}:
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.INTERFACE,
@@ -280,7 +280,7 @@ class TypeScriptExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_method(
         self,
         node: Any,
@@ -290,17 +290,17 @@ class TypeScriptExtractor(BaseExtractor):
         """Extract method entity."""
         name = None
         for child in node.children:
-            if child.type == "property_identifier" or child.type == "identifier":
+            if child.type in {"property_identifier", "identifier"}:
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{name}"
         if self._current_class:
             qualified_name = f"{file_path}::{self._current_class}.{name}"
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.METHOD,
@@ -315,7 +315,7 @@ class TypeScriptExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_class_relations(
         self,
         node: Any,
@@ -330,7 +330,7 @@ class TypeScriptExtractor(BaseExtractor):
                 for heritage in child.children:
                     if heritage.type == "extends_clause":
                         for ext in heritage.children:
-                            if ext.type == "identifier" or ext.type == "type_identifier":
+                            if ext.type in {"identifier", "type_identifier"}:
                                 parent = self._get_node_text(ext, source_code)
                                 relations.append(Relation(
                                     source_id=class_id,
@@ -339,14 +339,14 @@ class TypeScriptExtractor(BaseExtractor):
                                 ))
                     elif heritage.type == "implements_clause":
                         for impl in heritage.children:
-                            if impl.type == "identifier" or impl.type == "type_identifier":
+                            if impl.type in {"identifier", "type_identifier"}:
                                 iface = self._get_node_text(impl, source_code)
                                 relations.append(Relation(
                                     source_id=class_id,
                                     target_id=f"unresolved::{iface}",
                                     type=RelationType.IMPLEMENTS,
                                 ))
-    
+
     def _extract_import(
         self,
         node: Any,
@@ -368,7 +368,7 @@ class TypeScriptExtractor(BaseExtractor):
                     type=RelationType.IMPORTS,
                 ))
                 break
-    
+
     def _extract_calls(
         self,
         node: Any,
@@ -396,7 +396,7 @@ class TypeScriptExtractor(BaseExtractor):
                         target_id=f"unresolved::{text}",
                         type=RelationType.CALLS,
                     ))
-        
+
         # Recurse
         for child in node.children:
             self._extract_calls(child, file_path, source_code, caller_id, relations)

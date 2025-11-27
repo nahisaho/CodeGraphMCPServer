@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from codegraph_mcp.core.parser import (
-    ParseResult,
     Entity,
-    Relation,
-    Location,
     EntityType,
+    Location,
+    ParseResult,
+    Relation,
     RelationType,
 )
 from codegraph_mcp.languages.config import (
@@ -28,17 +28,17 @@ from codegraph_mcp.languages.config import (
 class RustExtractor(BaseExtractor):
     """
     Rust-specific entity and relation extractor.
-    
+
     Extracts:
     - Functions
     - Structs and enums
     - Traits and impl blocks
     - Use statements (imports)
     - Call relations
-    
+
     Requirements: REQ-AST-003
     """
-    
+
     config = LanguageConfig(
         name="rust",
         extensions=[".rs"],
@@ -48,7 +48,7 @@ class RustExtractor(BaseExtractor):
         import_nodes=["use_declaration"],
         interface_nodes=["trait_item"],
     )
-    
+
     def extract(
         self,
         tree: Any,
@@ -58,11 +58,11 @@ class RustExtractor(BaseExtractor):
         """Extract entities and relations from Rust AST."""
         entities: list[Entity] = []
         relations: list[Relation] = []
-        
+
         # Create module entity
         module_name = file_path.stem
         module_id = self._generate_entity_id(file_path, module_name, 1)
-        
+
         entities.append(Entity(
             id=module_id,
             type=EntityType.MODULE,
@@ -76,11 +76,11 @@ class RustExtractor(BaseExtractor):
                 end_column=0,
             ),
         ))
-        
+
         # Context tracking
         self._current_impl: str | None = None
         self._current_impl_id: str | None = None
-        
+
         # Walk the tree
         self._walk_tree(
             tree.root_node,
@@ -90,9 +90,9 @@ class RustExtractor(BaseExtractor):
             relations,
             module_id,
         )
-        
+
         return ParseResult(entities=entities, relations=relations)
-    
+
     def _walk_tree(
         self,
         node: Any,
@@ -103,7 +103,7 @@ class RustExtractor(BaseExtractor):
         parent_id: str,
     ) -> None:
         """Recursively walk the AST tree."""
-        
+
         if node.type == "function_item":
             entity = self._extract_function(node, file_path, source_code)
             if entity:
@@ -116,7 +116,7 @@ class RustExtractor(BaseExtractor):
                 self._extract_calls(
                     node, file_path, source_code, entity.id, relations
                 )
-        
+
         elif node.type == "struct_item":
             entity = self._extract_struct(node, file_path, source_code)
             if entity:
@@ -126,7 +126,7 @@ class RustExtractor(BaseExtractor):
                     target_id=entity.id,
                     type=RelationType.CONTAINS,
                 ))
-        
+
         elif node.type == "enum_item":
             entity = self._extract_enum(node, file_path, source_code)
             if entity:
@@ -136,7 +136,7 @@ class RustExtractor(BaseExtractor):
                     target_id=entity.id,
                     type=RelationType.CONTAINS,
                 ))
-        
+
         elif node.type == "trait_item":
             entity = self._extract_trait(node, file_path, source_code)
             if entity:
@@ -146,26 +146,26 @@ class RustExtractor(BaseExtractor):
                     target_id=entity.id,
                     type=RelationType.CONTAINS,
                 ))
-        
+
         elif node.type == "impl_item":
             self._extract_impl(
                 node, file_path, source_code,
                 entities, relations, parent_id,
             )
             return  # impl_item handles its own children
-        
+
         elif node.type == "use_declaration":
             self._extract_use(
                 node, file_path, source_code, parent_id, relations
             )
-        
+
         # Recurse
         for child in node.children:
             self._walk_tree(
                 child, file_path, source_code,
                 entities, relations, parent_id,
             )
-    
+
     def _extract_function(
         self,
         node: Any,
@@ -178,17 +178,17 @@ class RustExtractor(BaseExtractor):
             if child.type == "identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         qualified_name = f"{file_path}::{name}"
         entity_type = EntityType.FUNCTION
-        
+
         if self._current_impl:
             qualified_name = f"{file_path}::{self._current_impl}::{name}"
             entity_type = EntityType.METHOD
-        
+
         # Extract signature
         signature = None
         for child in node.children:
@@ -196,7 +196,7 @@ class RustExtractor(BaseExtractor):
                 params = self._get_node_text(child, source_code)
                 signature = f"fn {name}{params}"
                 break
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=entity_type,
@@ -212,7 +212,7 @@ class RustExtractor(BaseExtractor):
             signature=signature,
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_struct(
         self,
         node: Any,
@@ -225,10 +225,10 @@ class RustExtractor(BaseExtractor):
             if child.type == "type_identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.STRUCT,
@@ -243,7 +243,7 @@ class RustExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_enum(
         self,
         node: Any,
@@ -256,10 +256,10 @@ class RustExtractor(BaseExtractor):
             if child.type == "type_identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.ENUM,
@@ -274,7 +274,7 @@ class RustExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_trait(
         self,
         node: Any,
@@ -287,10 +287,10 @@ class RustExtractor(BaseExtractor):
             if child.type == "type_identifier":
                 name = self._get_node_text(child, source_code)
                 break
-        
+
         if not name:
             return None
-        
+
         return Entity(
             id=self._generate_entity_id(file_path, name, node.start_point[0] + 1),
             type=EntityType.TRAIT,
@@ -305,7 +305,7 @@ class RustExtractor(BaseExtractor):
             ),
             source_code=self._get_node_text(node, source_code),
         )
-    
+
     def _extract_impl(
         self,
         node: Any,
@@ -319,7 +319,7 @@ class RustExtractor(BaseExtractor):
         # Find the type being implemented
         impl_type = None
         trait_name = None
-        
+
         for child in node.children:
             if child.type == "type_identifier":
                 if impl_type is None:
@@ -328,10 +328,10 @@ class RustExtractor(BaseExtractor):
                     # Second type_identifier is the trait being implemented
                     trait_name = impl_type
                     impl_type = self._get_node_text(child, source_code)
-        
+
         if not impl_type:
             return
-        
+
         # Add implements relation if trait
         if trait_name:
             relations.append(Relation(
@@ -339,11 +339,11 @@ class RustExtractor(BaseExtractor):
                 target_id=f"unresolved::{trait_name}",
                 type=RelationType.IMPLEMENTS,
             ))
-        
+
         # Process impl body
         old_impl = self._current_impl
         self._current_impl = impl_type
-        
+
         for child in node.children:
             if child.type == "declaration_list":
                 for item in child.children:
@@ -351,9 +351,9 @@ class RustExtractor(BaseExtractor):
                         item, file_path, source_code,
                         entities, relations, parent_id,
                     )
-        
+
         self._current_impl = old_impl
-    
+
     def _extract_use(
         self,
         node: Any,
@@ -364,11 +364,11 @@ class RustExtractor(BaseExtractor):
     ) -> None:
         """Extract use (import) relations."""
         # Extract the path being imported
-        use_text = self._get_node_text(node, source_code)
-        
+        self._get_node_text(node, source_code)
+
         # Simple path extraction
         for child in node.children:
-            if child.type == "use_tree" or child.type == "scoped_identifier":
+            if child.type in {"use_tree", "scoped_identifier"}:
                 path = self._get_node_text(child, source_code)
                 relations.append(Relation(
                     source_id=parent_id,
@@ -376,7 +376,7 @@ class RustExtractor(BaseExtractor):
                     type=RelationType.IMPORTS,
                 ))
                 break
-    
+
     def _extract_calls(
         self,
         node: Any,
@@ -395,7 +395,7 @@ class RustExtractor(BaseExtractor):
                     target_id=f"unresolved::{func_text}",
                     type=RelationType.CALLS,
                 ))
-        
+
         # Recurse
         for child in node.children:
             self._extract_calls(child, file_path, source_code, caller_id, relations)

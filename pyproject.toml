@@ -199,6 +199,20 @@ ignore = [
     "E501",   # line too long (handled by formatter)
     "PLR0913", # too many arguments
     "PLR2004", # magic value comparison
+    "RUF002",  # ambiguous unicode character in docstring (Japanese chars)
+    "RUF003",  # ambiguous unicode character in comment (Japanese chars)
+    "RUF012",  # mutable class attributes
+    "ARG002",  # unused method argument (often needed for interface compliance)
+    "PLW2901", # for loop variable overwritten
+    "ERA001",  # commented out code (sometimes intentional)
+    "SIM102",  # nested if (sometimes clearer)
+    "SIM117",  # nested with (sometimes clearer)
+    "PLR0911", # too many return statements
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+    "PLC0415", # import inside function (needed for lazy loading)
+    "B904",    # raise without from in except
+    "PTH123",  # open() instead of Path.open()
 ]
 
 [tool.ruff.lint.isort]
@@ -207,8 +221,14 @@ force-single-line = false
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG", "PLR2004"]
+"tests/*" = ["ARG", "PLR2004", "PLC0415"]
 "__init__.py" = ["F401"]
+"__main__.py" = ["PLC0415", "ARG001", "PLR0915", "PLR0912"]
+"src/codegraph_mcp/languages/*" = ["PLR0911", "PLR0912", "PLR0915"]
+"src/codegraph_mcp/mcp/*" = ["PLC0415", "ARG001"]
+"src/codegraph_mcp/server.py" = ["PLC0415"]
+"src/codegraph_mcp/config.py" = ["PLC0415", "PTH123"]
+"src/codegraph_mcp/core/*" = ["PLC0415"]
 
 [tool.ruff.format]
 quote-style = "double"

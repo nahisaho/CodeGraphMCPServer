@@ -30,17 +30,18 @@ class TestCppExtractor:
             import tree_sitter_cpp as ts_cpp
         except ImportError:
             pytest.skip("tree-sitter-cpp not installed")
-        
-        from codegraph_mcp.languages.cpp import CppExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.cpp import CppExtractor
+
         # Initialize parser
         cpp_lang = ts.Language(ts_cpp.language())
         parser = ts.Parser(cpp_lang)
-        
+
         # Parse source
         tree = parser.parse(cpp_source.encode())
-        
+
         # Extract entities
         extractor = CppExtractor()
         return extractor.extract(tree, CPP_FIXTURE_PATH, cpp_source)
@@ -55,7 +56,7 @@ class TestCppExtractor:
         """Test class extraction."""
         classes = [e for e in parse_result.entities if e.type == EntityType.CLASS]
         class_names = {c.name for c in classes}
-        
+
         assert "BaseCalculator" in class_names
         assert "Calculator" in class_names
         assert "AdvancedCalculator" in class_names
@@ -64,21 +65,21 @@ class TestCppExtractor:
         """Test struct extraction."""
         structs = [e for e in parse_result.entities if e.type == EntityType.STRUCT]
         struct_names = {s.name for s in structs}
-        
+
         assert "Point" in struct_names
 
     def test_function_extraction(self, parse_result):
         """Test free function extraction."""
         functions = [e for e in parse_result.entities if e.type == EntityType.FUNCTION]
         func_names = {f.name for f in functions}
-        
+
         assert "createDefaultPrecision" in func_names
 
     def test_method_extraction(self, parse_result):
         """Test method extraction."""
         methods = [e for e in parse_result.entities if e.type == EntityType.METHOD]
         method_names = {m.name for m in methods}
-        
+
         assert "add" in method_names
         assert "subtract" in method_names
         assert "multiply" in method_names
@@ -87,7 +88,7 @@ class TestCppExtractor:
     def test_inheritance_relations(self, parse_result):
         """Test inheritance relation extraction."""
         inherits = [r for r in parse_result.relations if r.type == RelationType.INHERITS]
-        
+
         # Calculator inherits from BaseCalculator
         assert any("BaseCalculator" in r.target_id for r in inherits)
 
@@ -95,7 +96,7 @@ class TestCppExtractor:
         """Test #include extraction."""
         imports = [r for r in parse_result.relations if r.type == RelationType.IMPORTS]
         import_targets = {r.target_id for r in imports}
-        
+
         assert any("iostream" in t for t in import_targets)
         assert any("cmath" in t for t in import_targets)
 
@@ -121,19 +122,20 @@ class TestCppExtractorEdgeCases:
             import tree_sitter_cpp as ts_cpp
         except ImportError:
             pytest.skip("tree-sitter-cpp not installed")
-        
-        from codegraph_mcp.languages.cpp import CppExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.cpp import CppExtractor
+
         cpp_lang = ts.Language(ts_cpp.language())
         parser = ts.Parser(cpp_lang)
-        
+
         source = "// Empty file\n"
         tree = parser.parse(source.encode())
-        
+
         extractor = CppExtractor()
         result = extractor.extract(tree, Path("empty.cpp"), source)
-        
+
         # Should have module entity
         assert len(result.entities) >= 1
 
@@ -143,23 +145,24 @@ class TestCppExtractorEdgeCases:
             import tree_sitter_cpp as ts_cpp
         except ImportError:
             pytest.skip("tree-sitter-cpp not installed")
-        
-        from codegraph_mcp.languages.cpp import CppExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.cpp import CppExtractor
+
         cpp_lang = ts.Language(ts_cpp.language())
         parser = ts.Parser(cpp_lang)
-        
+
         source = '''
 int main() {
     return 0;
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = CppExtractor()
         result = extractor.extract(tree, Path("main.cpp"), source)
-        
+
         functions = [e for e in result.entities if e.type == EntityType.FUNCTION]
         assert len(functions) == 1
         assert functions[0].name == "main"
@@ -170,13 +173,14 @@ int main() {
             import tree_sitter_cpp as ts_cpp
         except ImportError:
             pytest.skip("tree-sitter-cpp not installed")
-        
-        from codegraph_mcp.languages.cpp import CppExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.cpp import CppExtractor
+
         cpp_lang = ts.Language(ts_cpp.language())
         parser = ts.Parser(cpp_lang)
-        
+
         source = '''
 template<typename T>
 class Container {
@@ -187,10 +191,10 @@ private:
 };
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = CppExtractor()
         result = extractor.extract(tree, Path("container.cpp"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
         assert classes[0].name == "Container"
@@ -201,13 +205,14 @@ private:
             import tree_sitter_cpp as ts_cpp
         except ImportError:
             pytest.skip("tree-sitter-cpp not installed")
-        
-        from codegraph_mcp.languages.cpp import CppExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.cpp import CppExtractor
+
         cpp_lang = ts.Language(ts_cpp.language())
         parser = ts.Parser(cpp_lang)
-        
+
         source = '''
 namespace MyApp {
     class Widget {
@@ -217,10 +222,10 @@ namespace MyApp {
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = CppExtractor()
         result = extractor.extract(tree, Path("widget.cpp"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
         assert classes[0].name == "Widget"
@@ -231,13 +236,14 @@ namespace MyApp {
             import tree_sitter_cpp as ts_cpp
         except ImportError:
             pytest.skip("tree-sitter-cpp not installed")
-        
-        from codegraph_mcp.languages.cpp import CppExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.cpp import CppExtractor
+
         cpp_lang = ts.Language(ts_cpp.language())
         parser = ts.Parser(cpp_lang)
-        
+
         source = '''
 class Calculator {
 public:
@@ -246,12 +252,12 @@ public:
 };
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = CppExtractor()
         result = extractor.extract(tree, Path("calc.h"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
-        
+
         methods = [e for e in result.entities if e.type == EntityType.METHOD]
         assert len(methods) == 2

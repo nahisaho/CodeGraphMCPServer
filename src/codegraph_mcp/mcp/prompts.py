@@ -17,7 +17,7 @@ from codegraph_mcp.config import Config
 
 def register(server: Server, config: Config) -> None:
     """Register all MCP prompts with the server."""
-    
+
     @server.list_prompts()
     async def list_prompts() -> list[Prompt]:
         """Return list of available prompts."""
@@ -120,7 +120,7 @@ def register(server: Server, config: Config) -> None:
                 ],
             ),
         ]
-    
+
     @server.get_prompt()
     async def get_prompt(
         name: str,
@@ -128,12 +128,12 @@ def register(server: Server, config: Config) -> None:
     ) -> list[PromptMessage]:
         """Get prompt messages for the given prompt."""
         from codegraph_mcp.core.graph import GraphEngine
-        
+
         arguments = arguments or {}
-        
+
         engine = GraphEngine(config.repo_path)
         await engine.initialize()
-        
+
         try:
             return await _dispatch_prompt(name, arguments, engine, config)
         finally:
@@ -155,11 +155,11 @@ async def _dispatch_prompt(
         "refactor_guidance": _prompt_refactor_guidance,
         "test_generation": _prompt_test_generation,
     }
-    
+
     handler = handlers.get(name)
     if handler:
         return await handler(args, engine, config)
-    
+
     return [PromptMessage(
         role="user",
         content=TextContent(type="text", text=f"Unknown prompt: {name}"),
@@ -174,17 +174,17 @@ async def _prompt_code_review(
     """Generate code review prompt (REQ-PRM-001)."""
     entity = await engine.get_entity(args["entity_id"])
     focus = args.get("focus", "general")
-    
+
     if not entity:
         return [PromptMessage(
             role="user",
             content=TextContent(type="text", text="Entity not found"),
         )]
-    
+
     # Get context
     callers = await engine.find_callers(entity.id)
     callees = await engine.find_callees(entity.id)
-    
+
     context = f"""
 # Code Review Request
 
@@ -213,7 +213,7 @@ Please review this code for:
 4. Security vulnerabilities (if applicable)
 5. Suggestions for improvement
 """
-    
+
     return [PromptMessage(
         role="user",
         content=TextContent(type="text", text=context),
@@ -228,18 +228,18 @@ async def _prompt_explain_codebase(
     """Generate codebase explanation prompt (REQ-PRM-002)."""
     stats = await engine.get_statistics()
     depth = args.get("depth", "overview")
-    
+
     # Get community summaries for high-level overview
     cursor = await engine._connection.execute(
         "SELECT name, summary, member_count FROM communities ORDER BY member_count DESC LIMIT 10"
     )
     communities = await cursor.fetchall()
-    
+
     community_text = "\n".join(
         f"- **{c[0] or f'Community {i}'}** ({c[2]} members): {c[1] or 'No summary'}"
         for i, c in enumerate(communities)
     )
-    
+
     context = f"""
 # Codebase Explanation Request
 
@@ -261,7 +261,7 @@ Please explain this codebase at the {depth} level:
 - What are the key components and how do they interact?
 - What architectural patterns are used?
 """
-    
+
     return [PromptMessage(
         role="user",
         content=TextContent(type="text", text=context),
@@ -276,16 +276,16 @@ async def _prompt_implement_feature(
     """Generate feature implementation prompt (REQ-PRM-003)."""
     description = args["description"]
     related = args.get("related_entities", "")
-    
+
     # Search for related entities
     from codegraph_mcp.core.graph import GraphQuery
     result = await engine.query(GraphQuery(query=description, max_results=10))
-    
+
     related_text = "\n".join(
         f"- {e.type.value} `{e.qualified_name}` in {e.file_path}"
         for e in result.entities
     )
-    
+
     context = f"""
 # Feature Implementation Request
 
@@ -304,7 +304,7 @@ Please help implement this feature:
 3. Provide implementation guidance
 4. Consider edge cases and error handling
 """
-    
+
     return [PromptMessage(
         role="user",
         content=TextContent(type="text", text=context),
@@ -319,16 +319,16 @@ async def _prompt_debug_issue(
     """Generate debug assistance prompt (REQ-PRM-004)."""
     error_message = args["error_message"]
     additional_context = args.get("context", "")
-    
+
     # Search for entities related to the error
     from codegraph_mcp.core.graph import GraphQuery
     result = await engine.query(GraphQuery(query=error_message, max_results=10))
-    
+
     related_text = "\n".join(
         f"- {e.type.value} `{e.name}` at {e.file_path}:{e.start_line}"
         for e in result.entities
     )
-    
+
     context = f"""
 # Debug Assistance Request
 
@@ -350,7 +350,7 @@ Please help debug this issue:
 3. Suggest debugging steps
 4. Recommend fixes
 """
-    
+
     return [PromptMessage(
         role="user",
         content=TextContent(type="text", text=context),
@@ -365,17 +365,17 @@ async def _prompt_refactor_guidance(
     """Generate refactoring guidance prompt (REQ-PRM-005)."""
     entity = await engine.get_entity(args["entity_id"])
     goal = args.get("goal", "improve code quality")
-    
+
     if not entity:
         return [PromptMessage(
             role="user",
             content=TextContent(type="text", text="Entity not found"),
         )]
-    
+
     # Get usage context
     callers = await engine.find_callers(entity.id)
     callees = await engine.find_callees(entity.id)
-    
+
     context = f"""
 # Refactoring Guidance Request
 
@@ -403,7 +403,7 @@ Please provide refactoring guidance:
 3. Show before/after examples
 4. Consider impact on callers
 """
-    
+
     return [PromptMessage(
         role="user",
         content=TextContent(type="text", text=context),
@@ -418,16 +418,16 @@ async def _prompt_test_generation(
     """Generate test generation prompt (REQ-PRM-006)."""
     entity = await engine.get_entity(args["entity_id"])
     test_type = args.get("test_type", "unit")
-    
+
     if not entity:
         return [PromptMessage(
             role="user",
             content=TextContent(type="text", text="Entity not found"),
         )]
-    
+
     # Get dependencies for mocking
     deps = await engine.find_dependencies(entity.id, depth=1)
-    
+
     context = f"""
 # Test Generation Request
 
@@ -454,7 +454,7 @@ Please generate {test_type} tests for this code:
 3. Test error conditions
 4. Suggest mocking strategy for dependencies
 """
-    
+
     return [PromptMessage(
         role="user",
         content=TextContent(type="text", text=context),

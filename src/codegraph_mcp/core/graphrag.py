@@ -9,8 +9,9 @@ Design Reference: design-mcp-interface.md §2.1
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from codegraph_mcp.core.graph import GraphEngine
@@ -292,6 +293,7 @@ class GraphRAGSearch:
     ) -> list[Entity]:
         """Get entities in a community."""
         from pathlib import Path
+
         from codegraph_mcp.core.parser import Entity, EntityType, Location
 
         cursor = await self.engine._connection.execute(
@@ -343,6 +345,7 @@ class GraphRAGSearch:
     ) -> list[Entity]:
         """Get entities in the neighborhood of a given entity."""
         from pathlib import Path
+
         from codegraph_mcp.core.parser import Entity, EntityType, Location
 
         # Get directly connected entities

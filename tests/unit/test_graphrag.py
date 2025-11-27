@@ -5,15 +5,16 @@ Tests: TASK-042, TASK-043
 Requirements: REQ-TLS-010, REQ-TLS-011
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from codegraph_mcp.core.graphrag import (
-    GraphRAGSearch,
-    SearchResult,
     GlobalSearchResult,
+    GraphRAGSearch,
     LocalSearchResult,
+    SearchResult,
 )
 from codegraph_mcp.core.parser import Entity, EntityType, Location
 
@@ -136,7 +137,7 @@ class TestGraphRAGSearch:
         """Test global search with communities."""
         # Mock for communities and entities queries
         call_count = [0]
-        
+
         async def mock_fetchall():
             call_count[0] += 1
             if call_count[0] == 1:
@@ -148,7 +149,7 @@ class TestGraphRAGSearch:
             else:
                 # Subsequent calls: _get_community_entities
                 return []  # No entities for simplicity
-        
+
         cursor_mock = AsyncMock()
         cursor_mock.fetchall = mock_fetchall
         mock_engine._connection.execute = AsyncMock(return_value=cursor_mock)

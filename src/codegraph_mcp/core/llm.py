@@ -12,11 +12,13 @@ from __future__ import annotations
 import json
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from codegraph_mcp.core.community import Community
     from codegraph_mcp.core.parser import Entity
 
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
 @dataclass
 class LLMConfig:
     """LLM configuration."""
-    
+
     provider: str = "openai"  # openai, anthropic, local
     model: str = "gpt-4o-mini"
     api_key: str = ""
@@ -32,12 +34,12 @@ class LLMConfig:
     max_tokens: int = 1024
     temperature: float = 0.3
     timeout: float = 60.0
-    
+
     @classmethod
-    def from_env(cls) -> "LLMConfig":
+    def from_env(cls) -> LLMConfig:
         """Create config from environment variables."""
         provider = os.getenv("CODEGRAPH_LLM_PROVIDER", "openai")
-        
+
         if provider == "openai":
             return cls(
                 provider="openai",
@@ -57,14 +59,14 @@ class LLMConfig:
                 model=os.getenv("LOCAL_MODEL", "llama3"),
                 base_url=os.getenv("LOCAL_LLM_URL", "http://localhost:11434"),
             )
-        
+
         return cls(provider=provider)
 
 
 @dataclass
 class LLMResponse:
     """LLM response."""
-    
+
     content: str
     model: str
     usage: dict[str, int] = field(default_factory=dict)
@@ -74,7 +76,7 @@ class LLMResponse:
 
 class LLMProvider(ABC):
     """Abstract LLM provider."""
-    
+
     @abstractmethod
     async def complete(
         self,
@@ -83,7 +85,7 @@ class LLMProvider(ABC):
     ) -> LLMResponse:
         """Generate completion."""
         pass
-    
+
     @abstractmethod
     async def complete_stream(
         self,
@@ -96,11 +98,11 @@ class LLMProvider(ABC):
 
 class OpenAIProvider(LLMProvider):
     """OpenAI API provider."""
-    
+
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
         self._client: Any = None
-    
+
     def _get_client(self) -> Any:
         """Lazy initialize OpenAI client."""
         if self._client is None:
@@ -116,7 +118,7 @@ class OpenAIProvider(LLMProvider):
                     "Install with: pip install openai"
                 )
         return self._client
-    
+
     async def complete(
         self,
         messages: list[dict[str, str]],
@@ -124,14 +126,14 @@ class OpenAIProvider(LLMProvider):
     ) -> LLMResponse:
         """Generate completion via OpenAI API."""
         client = self._get_client()
-        
+
         response = await client.chat.completions.create(
             model=kwargs.get("model", self.config.model),
             messages=messages,
             max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
             temperature=kwargs.get("temperature", self.config.temperature),
         )
-        
+
         choice = response.choices[0]
         return LLMResponse(
             content=choice.message.content or "",
@@ -144,7 +146,7 @@ class OpenAIProvider(LLMProvider):
             finish_reason=choice.finish_reason or "stop",
             raw=response.model_dump(),
         )
-    
+
     async def complete_stream(
         self,
         messages: list[dict[str, str]],
@@ -152,7 +154,7 @@ class OpenAIProvider(LLMProvider):
     ) -> AsyncIterator[str]:
         """Generate streaming completion."""
         client = self._get_client()
-        
+
         stream = await client.chat.completions.create(
             model=kwargs.get("model", self.config.model),
             messages=messages,
@@ -160,7 +162,7 @@ class OpenAIProvider(LLMProvider):
             temperature=kwargs.get("temperature", self.config.temperature),
             stream=True,
         )
-        
+
         async for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
@@ -168,11 +170,11 @@ class OpenAIProvider(LLMProvider):
 
 class AnthropicProvider(LLMProvider):
     """Anthropic API provider."""
-    
+
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
         self._client: Any = None
-    
+
     def _get_client(self) -> Any:
         """Lazy initialize Anthropic client."""
         if self._client is None:
@@ -185,7 +187,7 @@ class AnthropicProvider(LLMProvider):
                     "Install with: pip install anthropic"
                 )
         return self._client
-    
+
     async def complete(
         self,
         messages: list[dict[str, str]],
@@ -193,7 +195,7 @@ class AnthropicProvider(LLMProvider):
     ) -> LLMResponse:
         """Generate completion via Anthropic API."""
         client = self._get_client()
-        
+
         # Convert messages format
         system = ""
         user_messages = []
@@ -205,14 +207,14 @@ class AnthropicProvider(LLMProvider):
                     "role": msg["role"],
                     "content": msg["content"],
                 })
-        
+
         response = await client.messages.create(
             model=kwargs.get("model", self.config.model),
             max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
             system=system,
             messages=user_messages,
         )
-        
+
         return LLMResponse(
             content=response.content[0].text if response.content else "",
             model=response.model,
@@ -224,7 +226,7 @@ class AnthropicProvider(LLMProvider):
             finish_reason=response.stop_reason or "stop",
             raw={"id": response.id, "model": response.model},
         )
-    
+
     async def complete_stream(
         self,
         messages: list[dict[str, str]],
@@ -232,7 +234,7 @@ class AnthropicProvider(LLMProvider):
     ) -> AsyncIterator[str]:
         """Generate streaming completion."""
         client = self._get_client()
-        
+
         system = ""
         user_messages = []
         for msg in messages:
@@ -243,7 +245,7 @@ class AnthropicProvider(LLMProvider):
                     "role": msg["role"],
                     "content": msg["content"],
                 })
-        
+
         async with client.messages.stream(
             model=kwargs.get("model", self.config.model),
             max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
@@ -256,11 +258,11 @@ class AnthropicProvider(LLMProvider):
 
 class LocalProvider(LLMProvider):
     """Local LLM provider (Ollama compatible)."""
-    
+
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
         self.base_url = config.base_url or "http://localhost:11434"
-    
+
     async def complete(
         self,
         messages: list[dict[str, str]],
@@ -268,7 +270,7 @@ class LocalProvider(LLMProvider):
     ) -> LLMResponse:
         """Generate completion via local API."""
         import aiohttp
-        
+
         url = f"{self.base_url}/api/chat"
         payload = {
             "model": kwargs.get("model", self.config.model),
@@ -279,11 +281,11 @@ class LocalProvider(LLMProvider):
                 "num_predict": kwargs.get("max_tokens", self.config.max_tokens),
             },
         }
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as response:
                 data = await response.json()
-        
+
         return LLMResponse(
             content=data.get("message", {}).get("content", ""),
             model=data.get("model", self.config.model),
@@ -294,7 +296,7 @@ class LocalProvider(LLMProvider):
             finish_reason="stop",
             raw=data,
         )
-    
+
     async def complete_stream(
         self,
         messages: list[dict[str, str]],
@@ -302,14 +304,14 @@ class LocalProvider(LLMProvider):
     ) -> AsyncIterator[str]:
         """Generate streaming completion."""
         import aiohttp
-        
+
         url = f"{self.base_url}/api/chat"
         payload = {
             "model": kwargs.get("model", self.config.model),
             "messages": messages,
             "stream": True,
         }
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as response:
                 async for line in response.content:
@@ -321,10 +323,10 @@ class LocalProvider(LLMProvider):
 
 class RuleBasedProvider(LLMProvider):
     """Rule-based fallback provider (no API required)."""
-    
+
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
-    
+
     async def complete(
         self,
         messages: list[dict[str, str]],
@@ -337,17 +339,17 @@ class RuleBasedProvider(LLMProvider):
             if msg["role"] == "user":
                 user_msg = msg["content"]
                 break
-        
+
         # Generate simple response based on patterns
         content = self._generate_rule_based(user_msg)
-        
+
         return LLMResponse(
             content=content,
             model="rule-based",
             usage={},
             finish_reason="stop",
         )
-    
+
     async def complete_stream(
         self,
         messages: list[dict[str, str]],
@@ -356,7 +358,7 @@ class RuleBasedProvider(LLMProvider):
         """Generate streaming response."""
         response = await self.complete(messages, **kwargs)
         yield response.content
-    
+
     def _generate_rule_based(self, prompt: str) -> str:
         """Generate response using rules."""
         # Default summary template
@@ -366,15 +368,15 @@ class RuleBasedProvider(LLMProvider):
 class LLMClient:
     """
     High-level LLM client for code analysis.
-    
+
     Requirements: REQ-SEM-001, REQ-SEM-002
-    
+
     Usage:
         client = LLMClient()
         desc = await client.generate_entity_description(entity)
         summary = await client.generate_community_summary(community, entities)
     """
-    
+
     def __init__(
         self,
         config: LLMConfig | None = None,
@@ -382,7 +384,7 @@ class LLMClient:
     ) -> None:
         """
         Initialize LLM client.
-        
+
         Args:
             config: LLM configuration (or loads from env)
             fallback_to_rules: Use rule-based when API unavailable
@@ -390,31 +392,31 @@ class LLMClient:
         self.config = config or LLMConfig.from_env()
         self.fallback_to_rules = fallback_to_rules
         self._provider: LLMProvider | None = None
-    
+
     def _get_provider(self) -> LLMProvider:
         """Get or create LLM provider."""
         if self._provider is not None:
             return self._provider
-        
+
         if not self.config.api_key and self.config.provider != "local":
             if self.fallback_to_rules:
                 self._provider = RuleBasedProvider(self.config)
                 return self._provider
             raise ValueError(f"API key not configured for {self.config.provider}")
-        
+
         providers = {
             "openai": OpenAIProvider,
             "anthropic": AnthropicProvider,
             "local": LocalProvider,
         }
-        
+
         provider_class = providers.get(self.config.provider)
         if not provider_class:
             if self.fallback_to_rules:
                 self._provider = RuleBasedProvider(self.config)
                 return self._provider
             raise ValueError(f"Unknown provider: {self.config.provider}")
-        
+
         try:
             self._provider = provider_class(self.config)
         except ImportError:
@@ -422,9 +424,9 @@ class LLMClient:
                 self._provider = RuleBasedProvider(self.config)
             else:
                 raise
-        
+
         return self._provider
-    
+
     async def complete(
         self,
         prompt: str,
@@ -433,12 +435,12 @@ class LLMClient:
     ) -> str:
         """
         Generate completion.
-        
+
         Args:
             prompt: User prompt
             system: System prompt
             **kwargs: Additional parameters
-            
+
         Returns:
             Generated text
         """
@@ -446,27 +448,27 @@ class LLMClient:
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        
+
         provider = self._get_provider()
         response = await provider.complete(messages, **kwargs)
         return response.content
-    
+
     async def generate_entity_description(
         self,
         entity: Entity,
     ) -> str:
         """
         Generate natural language description for a code entity.
-        
+
         Args:
             entity: Code entity to describe
-            
+
         Returns:
             Description text
-            
+
         Requirements: REQ-SEM-001
         """
-        system = """You are a code documentation expert. Generate a clear, concise 
+        system = """You are a code documentation expert. Generate a clear, concise
 description of the given code entity. Focus on:
 1. What the code does
 2. Key parameters and return values
@@ -489,7 +491,7 @@ Source Code:
 ```"""
 
         return await self.complete(prompt, system=system)
-    
+
     async def generate_community_summary(
         self,
         community: Community,
@@ -497,31 +499,31 @@ Source Code:
     ) -> str:
         """
         Generate summary for a code community.
-        
+
         Args:
             community: Community metadata
             entities: Entities in the community
-            
+
         Returns:
             Summary text
-            
+
         Requirements: REQ-SEM-002
         """
         # Collect entity info
         type_counts: dict[str, int] = {}
         entity_info: list[str] = []
-        
+
         for entity in entities[:20]:  # Limit for token efficiency
             type_name = entity.type.value
             type_counts[type_name] = type_counts.get(type_name, 0) + 1
-            
+
             info = f"- {entity.name} ({type_name})"
             if entity.docstring:
                 first_line = entity.docstring.split("\n")[0][:100]
                 info += f": {first_line}"
             entity_info.append(info)
-        
-        system = """You are a software architecture expert. Analyze the given code 
+
+        system = """You are a software architecture expert. Analyze the given code
 community and generate a summary that describes:
 1. The main purpose/responsibility of this code module
 2. Key components and their roles
@@ -542,7 +544,7 @@ Key Entities:
 {chr(10).join(entity_info)}"""
 
         return await self.complete(prompt, system=system)
-    
+
     async def generate_codebase_overview(
         self,
         communities: list[Community],
@@ -550,15 +552,15 @@ Key Entities:
     ) -> str:
         """
         Generate high-level codebase overview.
-        
+
         Args:
             communities: Detected communities
             stats: Codebase statistics
-            
+
         Returns:
             Overview text
         """
-        system = """You are a software architecture expert. Generate a high-level 
+        system = """You are a software architecture expert. Generate a high-level
 overview of the codebase based on its structure and communities. Focus on:
 1. Overall architecture pattern
 2. Main modules and their responsibilities
@@ -572,7 +574,7 @@ Keep the overview under 200 words."""
                 f"- Community {c.id} (Level {c.level}): "
                 f"{c.member_count} members - {c.summary or 'No summary'}"
             )
-        
+
         prompt = f"""Generate a codebase overview:
 
 Statistics:
@@ -582,7 +584,7 @@ Top Communities:
 {chr(10).join(community_info)}"""
 
         return await self.complete(prompt, system=system)
-    
+
     async def answer_code_question(
         self,
         question: str,
@@ -590,17 +592,17 @@ Top Communities:
     ) -> str:
         """
         Answer a question about the code using context.
-        
+
         Args:
             question: User question
             context: Relevant code entities
-            
+
         Returns:
             Answer text
         """
-        system = """You are a code expert assistant. Answer the user's question 
-based on the provided code context. Be specific and reference the relevant 
-code entities when appropriate. If the context doesn't contain enough 
+        system = """You are a code expert assistant. Answer the user's question
+based on the provided code context. Be specific and reference the relevant
+code entities when appropriate. If the context doesn't contain enough
 information, say so."""
 
         context_text = []
@@ -613,7 +615,7 @@ File: {entity.file_path}:{entity.start_line}
 ```
 """
             context_text.append(info)
-        
+
         prompt = f"""Question: {question}
 
 Code Context:

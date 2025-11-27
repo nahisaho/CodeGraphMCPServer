@@ -30,17 +30,18 @@ class TestCSharpExtractor:
             import tree_sitter_c_sharp as ts_csharp
         except ImportError:
             pytest.skip("tree-sitter-c-sharp not installed")
-        
-        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         # Initialize parser
         csharp_lang = ts.Language(ts_csharp.language())
         parser = ts.Parser(csharp_lang)
-        
+
         # Parse source
         tree = parser.parse(csharp_source.encode())
-        
+
         # Extract entities
         extractor = CSharpExtractor()
         return extractor.extract(tree, CSHARP_FIXTURE_PATH, csharp_source)
@@ -54,7 +55,7 @@ class TestCSharpExtractor:
         """Test class extraction."""
         classes = [e for e in parse_result.entities if e.type == EntityType.CLASS]
         class_names = {c.name for c in classes}
-        
+
         assert "Calculator" in class_names
         assert "AdvancedCalculator" in class_names
 
@@ -62,28 +63,28 @@ class TestCSharpExtractor:
         """Test interface extraction."""
         interfaces = [e for e in parse_result.entities if e.type == EntityType.INTERFACE]
         interface_names = {i.name for i in interfaces}
-        
+
         assert "ICalculator" in interface_names
 
     def test_struct_extraction(self, parse_result):
         """Test struct extraction."""
         structs = [e for e in parse_result.entities if e.type == EntityType.STRUCT]
         struct_names = {s.name for s in structs}
-        
+
         assert "Point" in struct_names
 
     def test_enum_extraction(self, parse_result):
         """Test enum extraction."""
         enums = [e for e in parse_result.entities if e.type == EntityType.ENUM]
         enum_names = {e.name for e in enums}
-        
+
         assert "Operation" in enum_names
 
     def test_method_extraction(self, parse_result):
         """Test method extraction."""
         methods = [e for e in parse_result.entities if e.type == EntityType.METHOD]
         method_names = {m.name for m in methods}
-        
+
         assert "Add" in method_names
         assert "Subtract" in method_names
         assert "Multiply" in method_names
@@ -98,7 +99,7 @@ class TestCSharpExtractor:
     def test_inheritance_relations(self, parse_result):
         """Test inheritance relation extraction."""
         inherits = [r for r in parse_result.relations if r.type == RelationType.INHERITS]
-        
+
         # AdvancedCalculator inherits from Calculator
         assert any("Calculator" in r.target_id for r in inherits)
 
@@ -106,7 +107,7 @@ class TestCSharpExtractor:
         """Test using directive extraction."""
         imports = [r for r in parse_result.relations if r.type == RelationType.IMPORTS]
         import_targets = {r.target_id for r in imports}
-        
+
         assert any("System" in t for t in import_targets)
 
     def test_contains_relations(self, parse_result):
@@ -131,19 +132,20 @@ class TestCSharpExtractorEdgeCases:
             import tree_sitter_c_sharp as ts_csharp
         except ImportError:
             pytest.skip("tree-sitter-c-sharp not installed")
-        
-        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         csharp_lang = ts.Language(ts_csharp.language())
         parser = ts.Parser(csharp_lang)
-        
+
         source = "// Empty file\n"
         tree = parser.parse(source.encode())
-        
+
         extractor = CSharpExtractor()
         result = extractor.extract(tree, Path("empty.cs"), source)
-        
+
         # Should have module entity
         assert len(result.entities) >= 1
 
@@ -153,13 +155,14 @@ class TestCSharpExtractorEdgeCases:
             import tree_sitter_c_sharp as ts_csharp
         except ImportError:
             pytest.skip("tree-sitter-c-sharp not installed")
-        
-        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         csharp_lang = ts.Language(ts_csharp.language())
         parser = ts.Parser(csharp_lang)
-        
+
         source = '''
 public class HelloWorld
 {
@@ -170,10 +173,10 @@ public class HelloWorld
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = CSharpExtractor()
         result = extractor.extract(tree, Path("Hello.cs"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
         assert classes[0].name == "HelloWorld"
@@ -184,26 +187,27 @@ public class HelloWorld
             import tree_sitter_c_sharp as ts_csharp
         except ImportError:
             pytest.skip("tree-sitter-c-sharp not installed")
-        
-        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         csharp_lang = ts.Language(ts_csharp.language())
         parser = ts.Parser(csharp_lang)
-        
+
         source = '''
 public class Container<T>
 {
     private T _value;
-    
+
     public T GetValue() => _value;
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = CSharpExtractor()
         result = extractor.extract(tree, Path("container.cs"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
 
@@ -213,13 +217,14 @@ public class Container<T>
             import tree_sitter_c_sharp as ts_csharp
         except ImportError:
             pytest.skip("tree-sitter-c-sharp not installed")
-        
-        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         import tree_sitter as ts
-        
+
+        from codegraph_mcp.languages.csharp import CSharpExtractor
+
         csharp_lang = ts.Language(ts_csharp.language())
         parser = ts.Parser(csharp_lang)
-        
+
         source = '''
 public static class Utilities
 {
@@ -227,10 +232,10 @@ public static class Utilities
 }
 '''
         tree = parser.parse(source.encode())
-        
+
         extractor = CSharpExtractor()
         result = extractor.extract(tree, Path("utils.cs"), source)
-        
+
         classes = [e for e in result.entities if e.type == EntityType.CLASS]
         assert len(classes) == 1
         assert classes[0].name == "Utilities"

@@ -10,14 +10,14 @@ Design Reference: design-mcp-interface.md §2
 from typing import Any
 
 from mcp.server import Server
-from mcp.types import Tool, TextContent
+from mcp.types import TextContent, Tool
 
 from codegraph_mcp.config import Config
 
 
 def register(server: Server, config: Config) -> None:
     """Register all MCP tools with the server."""
-    
+
     @server.list_tools()
     async def list_tools() -> list[Tool]:
         """Return list of available tools."""
@@ -291,16 +291,15 @@ def register(server: Server, config: Config) -> None:
                 },
             ),
         ]
-    
+
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle tool calls."""
-        from codegraph_mcp.core.graph import GraphEngine, GraphQuery
-        from codegraph_mcp.core.indexer import Indexer
-        
+        from codegraph_mcp.core.graph import GraphEngine
+
         engine = GraphEngine(config.repo_path)
         await engine.initialize()
-        
+
         try:
             result = await _dispatch_tool(name, arguments, engine, config)
             return [TextContent(type="text", text=str(result))]
@@ -315,8 +314,7 @@ async def _dispatch_tool(
     config: Config,
 ) -> Any:
     """Dispatch tool call to appropriate handler."""
-    from codegraph_mcp.core.graph import GraphQuery
-    
+
     handlers = {
         "query_codebase": _handle_query_codebase,
         "find_dependencies": _handle_find_dependencies,
@@ -333,11 +331,11 @@ async def _dispatch_tool(
         "reindex_repository": _handle_reindex,
         "execute_shell_command": _handle_execute_command,
     }
-    
+
     handler = handlers.get(name)
     if handler:
         return await handler(args, engine, config)
-    
+
     return {"error": f"Unknown tool: {name}"}
 
 
@@ -352,7 +350,7 @@ async def _handle_query_codebase(
 
     # Parse entity types if provided
     entity_types = None
-    if "entity_types" in args and args["entity_types"]:
+    if args.get("entity_types"):
         type_map = {
             "function": EntityType.FUNCTION,
             "class": EntityType.CLASS,
@@ -451,13 +449,13 @@ async def _handle_analyze_module(
 ) -> dict[str, Any]:
     """Handle analyze_module_structure tool."""
     file_path = args["file_path"]
-    
+
     cursor = await engine._connection.execute(
         "SELECT type, name, start_line, end_line FROM entities WHERE file_path = ?",
         (file_path,),
     )
     rows = await cursor.fetchall()
-    
+
     return {
         "file": file_path,
         "entities": [
@@ -476,7 +474,7 @@ async def _handle_get_code_snippet(
     entity = await engine.get_entity(args["entity_id"])
     if not entity:
         return {"error": "Entity not found"}
-    
+
     return {
         "entity_id": entity.id,
         "name": entity.name,
@@ -490,18 +488,17 @@ async def _handle_read_file(
     config: Config,
 ) -> dict[str, Any]:
     """Handle read_file_content tool."""
-    from pathlib import Path
-    
+
     file_path = config.repo_path / args["file_path"]
     if not file_path.exists():
         return {"error": "File not found"}
-    
+
     content = file_path.read_text()
     lines = content.split("\n")
-    
+
     start = args.get("start_line", 1) - 1
     end = args.get("end_line", len(lines))
-    
+
     return {
         "file": args["file_path"],
         "content": "\n".join(lines[start:end]),
@@ -594,9 +591,9 @@ async def _handle_suggest_refactoring(
     entity = await engine.get_entity(args["entity_id"])
     if not entity:
         return {"error": "Entity not found"}
-    
+
     suggestions = []
-    
+
     # Analyze complexity
     if entity.source_code:
         lines = entity.source_code.count("\n") + 1
@@ -605,7 +602,7 @@ async def _handle_suggest_refactoring(
                 "type": "extract",
                 "reason": f"Function is {lines} lines, consider extraction",
             })
-    
+
     return {
         "entity": entity.name,
         "suggestions": suggestions,
@@ -619,13 +616,13 @@ async def _handle_reindex(
 ) -> dict[str, Any]:
     """Handle reindex_repository tool."""
     from codegraph_mcp.core.indexer import Indexer
-    
+
     indexer = Indexer()
     result = await indexer.index_repository(
         config.repo_path,
         incremental=args.get("incremental", True),
     )
-    
+
     return {
         "entities": result.entities_count,
         "relations": result.relations_count,
@@ -642,9 +639,9 @@ async def _handle_execute_command(
     """Handle execute_shell_command tool."""
     import asyncio
     import subprocess
-    
+
     timeout = args.get("timeout", 30)
-    
+
     try:
         proc = await asyncio.create_subprocess_shell(
             args["command"],
@@ -656,11 +653,11 @@ async def _handle_execute_command(
             proc.communicate(),
             timeout=timeout,
         )
-        
+
         return {
             "exit_code": proc.returncode,
             "stdout": stdout.decode(),
             "stderr": stderr.decode(),
         }
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return {"error": f"Command timed out after {timeout}s"}

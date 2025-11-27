@@ -15,10 +15,10 @@ from typing import Any
 class Community:
     """
     Represents a code community (cluster of related entities).
-    
+
     Requirements: REQ-SEM-003
     """
-    
+
     id: int
     level: int
     name: str | None = None
@@ -26,7 +26,7 @@ class Community:
     member_ids: list[str] = field(default_factory=list)
     parent_id: int | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    
+
     @property
     def member_count(self) -> int:
         return len(self.member_ids)
@@ -35,7 +35,7 @@ class Community:
 @dataclass
 class CommunityResult:
     """Result of community detection."""
-    
+
     communities: list[Community] = field(default_factory=list)
     levels: int = 0
     modularity: float = 0.0
@@ -44,15 +44,15 @@ class CommunityResult:
 class CommunityDetector:
     """
     Community detection using Louvain algorithm.
-    
+
     Requirements: REQ-SEM-003, REQ-SEM-004
     Design Reference: design-core-engine.md §2.5
-    
+
     Usage:
         detector = CommunityDetector()
         result = detector.detect(graph_engine)
     """
-    
+
     def __init__(
         self,
         algorithm: str = "louvain",
@@ -62,7 +62,7 @@ class CommunityDetector:
     ) -> None:
         """
         Initialize the community detector.
-        
+
         Args:
             algorithm: Detection algorithm ("louvain" or "leiden")
             resolution: Resolution parameter for modularity
@@ -73,60 +73,58 @@ class CommunityDetector:
         self.resolution = resolution
         self.min_size = min_size
         self.max_nodes = max_nodes
-    
+
     async def detect(self, engine: Any) -> CommunityResult:
         """
         Detect communities in the code graph.
-        
+
         Args:
             engine: GraphEngine instance
-            
+
         Returns:
             CommunityResult with detected communities
-            
+
         Requirements: REQ-SEM-003
         """
-        import networkx as nx
-        
+
         # Check graph size first
         cursor = await engine._connection.execute(
             "SELECT COUNT(*) FROM entities"
         )
         node_count = (await cursor.fetchone())[0]
-        
+
         # Build NetworkX graph from entities and relations
         G = await self._build_networkx_graph(engine)
-        
+
         if G.number_of_nodes() == 0:
             return CommunityResult()
-        
+
         # Sample large graphs for performance
         if node_count > self.max_nodes:
             G = self._sample_graph(G, self.max_nodes)
-        
+
         # Apply community detection
         if self.algorithm == "louvain":
             communities = self._detect_louvain(G)
         else:
             communities = self._detect_louvain(G)  # Fallback
-        
+
         # Store communities in database
         await self._store_communities(engine, communities)
-        
+
         return CommunityResult(
             communities=communities,
             levels=max((c.level for c in communities), default=0) + 1,
             modularity=self._compute_modularity(G, communities),
         )
-    
+
     def _sample_graph(self, G: Any, max_nodes: int) -> Any:
         """Sample graph for large-scale community detection."""
-        import networkx as nx
         import random
-        
+
         if G.number_of_nodes() <= max_nodes:
             return G
-        
+
         # Sample nodes by degree (keep high-degree nodes)
         degrees = dict(G.degree())
         sorted_nodes = sorted(
@@ -134,68 +132,67 @@ class CommunityDetector:
             key=lambda x: degrees[x],
             reverse=True
         )
-        
+
         # Keep top nodes by degree + random sample
         top_count = max_nodes // 2
         top_nodes = set(sorted_nodes[:top_count])
-        
-        remaining = [n for n in sorted_nodes[top_count:]]
+
+        remaining = list(sorted_nodes[top_count:])
         random.seed(42)
         random_sample = set(random.sample(
             remaining,
             min(max_nodes - top_count, len(remaining))
         ))
-        
+
         sampled_nodes = top_nodes | random_sample
         return G.subgraph(sampled_nodes).copy()
-    
+
     async def _build_networkx_graph(self, engine: Any) -> Any:
         """Build NetworkX graph from database (optimized for large graphs)."""
         import networkx as nx
-        
+
         G = nx.DiGraph()
-        
+
         # Batch fetch nodes - use fetchall() for speed
         cursor = await engine._connection.execute(
             "SELECT id, type, name FROM entities"
         )
         rows = await cursor.fetchall()
-        
+
         # Add nodes in bulk
         G.add_nodes_from(
             (row[0], {"type": row[1], "name": row[2]})
             for row in rows
         )
-        
+
         # Batch fetch edges
         cursor = await engine._connection.execute(
             "SELECT source_id, target_id, type, weight FROM relations"
         )
         rows = await cursor.fetchall()
-        
+
         # Add edges in bulk
         G.add_edges_from(
             (row[0], row[1], {"type": row[2], "weight": row[3]})
             for row in rows
         )
-        
+
         return G
-    
+
     def _detect_louvain(self, G: Any) -> list[Community]:
         """Apply Louvain algorithm for community detection."""
-        import networkx as nx
         from networkx.algorithms.community import louvain_communities
-        
+
         # Convert to undirected for Louvain
         G_undirected = G.to_undirected()
-        
+
         # Detect communities
         partition = louvain_communities(
             G_undirected,
             resolution=self.resolution,
             seed=42,
         )
-        
+
         communities = []
         for idx, members in enumerate(partition):
             if len(members) >= self.min_size:
@@ -204,9 +201,9 @@ class CommunityDetector:
                     level=0,
                     member_ids=list(members),
                 ))
-        
+
         return communities
-    
+
     async def _store_communities(
         self,
         engine: Any,
@@ -215,7 +212,7 @@ class CommunityDetector:
         """Store communities in database (batch optimized)."""
         # Clear existing communities
         await engine._connection.execute("DELETE FROM communities")
-        
+
         # Batch insert communities
         community_data = [
             (c.id, c.level, c.name, c.summary, c.member_count)
@@ -228,14 +225,14 @@ class CommunityDetector:
             """,
             community_data,
         )
-        
+
         # Batch update entity community assignments
         # Build (community_id, entity_id) pairs
         assignments = []
         for community in communities:
             for member_id in community.member_ids:
                 assignments.append((community.id, member_id))
-        
+
         # Execute batch update
         await engine._connection.executemany(
             "UPDATE entities SET community_id = ? WHERE id = ?",
@@ -343,17 +340,16 @@ class CommunityDetector:
 
     def _compute_modularity(self, G: Any, communities: list[Community]) -> float:
         """Compute modularity score."""
-        import networkx as nx
         from networkx.algorithms.community import modularity
-        
+
         G_undirected = G.to_undirected()
-        
+
         # Convert to list of sets for networkx
         partition = [set(c.member_ids) for c in communities]
-        
+
         if not partition:
             return 0.0
-        
+
         try:
             return modularity(G_undirected, partition)
         except Exception:

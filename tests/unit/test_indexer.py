@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from codegraph_mcp.core.indexer import FileInfo, IndexResult, Indexer
+from codegraph_mcp.core.indexer import FileInfo, Indexer, IndexResult
 from codegraph_mcp.core.parser import ASTParser
 
 
@@ -34,7 +34,7 @@ from main import helper
 class Calculator:
     def add(self, a: int, b: int) -> int:
         return a + b
-    
+
     def multiply(self, a: int, b: int) -> int:
         return self.add(a, 0)  # Just for testing calls
 """)
