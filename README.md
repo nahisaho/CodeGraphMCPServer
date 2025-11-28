@@ -1,6 +1,6 @@
 # CodeGraphMCPServer
 
-**ゼロ構成で起動可能な軽量・高速なソースコード分析MCPサーバー**
+**A lightweight, high-performance source code analysis MCP server with zero configuration**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,44 +9,46 @@
 [![Coverage](https://img.shields.io/badge/coverage-64%25-yellow.svg)]()
 [![CI](https://github.com/nahisaho/CodeGraphMCPServer/actions/workflows/ci.yml/badge.svg)](https://github.com/nahisaho/CodeGraphMCPServer/actions/workflows/ci.yml)
 
-## 概要
+[🇯🇵 日本語版 README](README.ja.md)
 
-CodeGraphMCPServer は、コードベースの構造を理解し、GraphRAG（Graph Retrieval-Augmented Generation）機能を提供するMCPサーバーです。外部データベース不要の自己完結型アーキテクチャで、MCP対応AIツール（GitHub Copilot、Claude Desktop、Cursor等）からコードベースの構造的理解と効率的なコード補完を実現します。
+## Overview
 
-### 🧠 GraphRAG機能
+CodeGraphMCPServer is an MCP server that understands codebase structure and provides GraphRAG (Graph Retrieval-Augmented Generation) capabilities. With a self-contained architecture requiring no external database, it enables structural understanding and efficient code completion from MCP-compatible AI tools (GitHub Copilot, Claude Desktop, Cursor, etc.).
 
-- **コミュニティ検出**: Louvainアルゴリズムによるコードモジュールの自動クラスタリング
-- **LLM統合**: OpenAI/Anthropic/ローカルLLM対応のマルチプロバイダー設計
-- **グローバル検索**: コミュニティサマリーを活用したコードベース全体の理解
-- **ローカル検索**: エンティティ近傍のコンテキスト取得
+### 🧠 GraphRAG Features
 
-### ✨ 特徴
+- **Community Detection**: Automatic code module clustering using Louvain algorithm
+- **LLM Integration**: Multi-provider design supporting OpenAI/Anthropic/Local LLMs
+- **Global Search**: Codebase-wide understanding using community summaries
+- **Local Search**: Context retrieval from entity neighborhoods
 
-| 特徴 | 説明 |
-|------|------|
-| 🚀 **ゼロ構成起動** | 外部DB不要、`pip install && serve` で即座に利用開始 |
-| 🌳 **AST解析** | Tree-sitterによる高速・正確なコード解析 |
-| 🔗 **グラフ構築** | コードエンティティ間の関係をグラフ化 |
-| 🔍 **14 MCP Tools** | 依存関係分析、呼び出し追跡、コード検索 |
-| 📚 **4 MCP Resources** | エンティティ、ファイル、コミュニティ、統計情報 |
-| 💬 **6 MCP Prompts** | コードレビュー、機能実装、デバッグ支援 |
-| ⚡ **高速インデックス** | 10万行を30秒以内、増分更新は2秒以内 |
-| 🌐 **多言語対応** | Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C, C++, HCL, Ruby をサポート（12言語） |
+### ✨ Features
 
-## 動作要件
+| Feature | Description |
+|---------|-------------|
+| 🚀 **Zero Configuration** | No external DB required, `pip install && serve` to start immediately |
+| 🌳 **AST Analysis** | Fast and accurate code analysis with Tree-sitter |
+| 🔗 **Graph Construction** | Builds graphs of relationships between code entities |
+| 🔍 **14 MCP Tools** | Dependency analysis, call tracing, code search |
+| 📚 **4 MCP Resources** | Entities, files, communities, statistics |
+| 💬 **6 MCP Prompts** | Code review, feature implementation, debug assistance |
+| ⚡ **Fast Indexing** | 100K lines in under 30 seconds, incremental updates in under 2 seconds |
+| 🌐 **Multi-language Support** | Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C, C++, HCL, Ruby (12 languages) |
+
+## Requirements
 
 - Python 3.11+
-- MCP対応クライアント (GitHub Copilot, Claude Desktop, Cursor, Windsurf)
+- MCP-compatible client (GitHub Copilot, Claude Desktop, Cursor, Windsurf)
 
-## インストール
+## Installation
 
-### pip でインストール
+### Install with pip
 
 ```bash
-pip install codegraph-mcp
+pip install codegraph-mcp-server
 ```
 
-### ソースからインストール（開発用）
+### Install from source (for development)
 
 ```bash
 git clone https://github.com/nahisaho/CodeGraphMCPServer.git
@@ -56,35 +58,35 @@ source .venv/bin/activate  # Linux/macOS
 pip install -e ".[dev]"
 ```
 
-## クイックスタート
+## Quick Start
 
-### 1. リポジトリをインデックス
+### 1. Index a Repository
 
 ```bash
-# フルインデックス
+# Full index
 codegraph-mcp index /path/to/repository --full
 
-# 増分インデックス（デフォルト）
+# Incremental index (default)
 codegraph-mcp index /path/to/repository
 
-# ファイル監視で自動再インデックス (v0.7.0 NEW)
+# Auto re-index with file watching (v0.7.0 NEW)
 codegraph-mcp watch /path/to/repository
-codegraph-mcp watch /path/to/repository --debounce 2.0  # 2秒のデバウンス
-codegraph-mcp watch /path/to/repository --community     # 再インデックス後にコミュニティ検出
+codegraph-mcp watch /path/to/repository --debounce 2.0  # 2 second debounce
+codegraph-mcp watch /path/to/repository --community     # Community detection after re-index
 ```
 
-**出力例:**
+**Output example:**
 ```
 Indexed 16 entities, 37 relations in 0.81s
 ```
 
-### 2. 統計情報を確認
+### 2. Check Statistics
 
 ```bash
 codegraph-mcp stats /path/to/repository
 ```
 
-**出力例:**
+**Output example:**
 ```
 Repository Statistics
 =====================
@@ -102,23 +104,23 @@ Entities by type:
   - module: 1
 ```
 
-### 3. コードを検索
+### 3. Search Code
 
 ```bash
 codegraph-mcp query "Calculator" --repo /path/to/repository
 ```
 
-### 4. MCPサーバーとして起動
+### 4. Start as MCP Server
 
 ```bash
-# stdio トランスポート（デフォルト）
+# stdio transport (default)
 codegraph-mcp serve --repo /path/to/repository
 
-# SSE トランスポート
-codegraph-mcp serve --repo /path/to/repository --transport sse --port 8080
+# SSE transport
+codegraph-mcp start --repo /path/to/repository --port 8080
 ```
 
-## MCP クライアント設定
+## MCP Client Configuration
 
 ### Claude Desktop
 
@@ -133,6 +135,17 @@ codegraph-mcp serve --repo /path/to/repository --transport sse --port 8080
     }
   }
 }
+```
+
+### Claude Code
+
+```bash
+# stdio transport
+claude mcp add codegraph -- codegraph-mcp serve --repo /path/to/project
+
+# HTTP transport (SSE server)
+codegraph-mcp start --port 8080  # In another terminal
+claude mcp add --transport http codegraph http://0.0.0.0:8080
 ```
 
 ### VS Code (GitHub Copilot)
@@ -165,197 +178,198 @@ codegraph-mcp serve --repo /path/to/repository --transport sse --port 8080
 }
 ```
 
-## 🛠 MCP Tools (14種)
+## 🛠 MCP Tools (14)
 
-### グラフクエリツール
+### Graph Query Tools
 
-| Tool | 説明 | 主な引数 |
-|------|------|----------|
-| `query_codebase` | 自然言語でコードグラフを検索 | `query`, `max_results` |
-| `find_dependencies` | エンティティの依存関係を検索 | `entity_id`, `depth` |
-| `find_callers` | 関数/メソッドの呼び出し元を検索 | `entity_id` |
-| `find_callees` | 関数/メソッドの呼び出し先を検索 | `entity_id` |
-| `find_implementations` | インターフェースの実装を検索 | `entity_id` |
-| `analyze_module_structure` | モジュール構造を分析 | `file_path` |
+| Tool | Description | Main Arguments |
+|------|-------------|----------------|
+| `query_codebase` | Search code graph with natural language | `query`, `max_results` |
+| `find_dependencies` | Find entity dependencies | `entity_id`, `depth` |
+| `find_callers` | Find callers of function/method | `entity_id` |
+| `find_callees` | Find callees of function/method | `entity_id` |
+| `find_implementations` | Find interface implementations | `entity_id` |
+| `analyze_module_structure` | Analyze module structure | `file_path` |
 
-### コード取得ツール
+### Code Retrieval Tools
 
-| Tool | 説明 | 主な引数 |
-|------|------|----------|
-| `get_code_snippet` | エンティティのソースコードを取得 | `entity_id`, `include_context` |
-| `read_file_content` | ファイル内容を取得 | `file_path`, `start_line`, `end_line` |
-| `get_file_structure` | ファイルの構造概要を取得 | `file_path` |
+| Tool | Description | Main Arguments |
+|------|-------------|----------------|
+| `get_code_snippet` | Get entity source code | `entity_id`, `include_context` |
+| `read_file_content` | Get file content | `file_path`, `start_line`, `end_line` |
+| `get_file_structure` | Get file structure overview | `file_path` |
 
-### GraphRAG ツール
+### GraphRAG Tools
 
-| Tool | 説明 | 主な引数 |
-|------|------|----------|
-| `global_search` | コミュニティ横断のグローバル検索 | `query` |
-| `local_search` | エンティティ近傍のローカル検索 | `query`, `entity_id` |
+| Tool | Description | Main Arguments |
+|------|-------------|----------------|
+| `global_search` | Cross-community global search | `query` |
+| `local_search` | Local search in entity neighborhood | `query`, `entity_id` |
 
-### 管理ツール
+### Management Tools
 
-| Tool | 説明 | 主な引数 |
-|------|------|----------|
-| `suggest_refactoring` | リファクタリング提案 | `entity_id`, `type` |
-| `reindex_repository` | リポジトリを再インデックス | `incremental` |
-| `execute_shell_command` | シェルコマンドを実行 | `command`, `timeout` |
+| Tool | Description | Main Arguments |
+|------|-------------|----------------|
+| `suggest_refactoring` | Suggest refactoring | `entity_id`, `type` |
+| `reindex_repository` | Re-index repository | `incremental` |
+| `execute_shell_command` | Execute shell command | `command`, `timeout` |
 
-## 📚 MCP Resources (4種)
+## 📚 MCP Resources (4)
 
-| URI パターン | 説明 |
-|-------------|------|
-| `codegraph://entities/{id}` | エンティティ詳細情報 |
-| `codegraph://files/{path}` | ファイル内のエンティティ一覧 |
-| `codegraph://communities/{id}` | コミュニティ情報 |
-| `codegraph://stats` | グラフ統計情報 |
+| URI Pattern | Description |
+|-------------|-------------|
+| `codegraph://entities/{id}` | Entity details |
+| `codegraph://files/{path}` | Entities in file |
+| `codegraph://communities/{id}` | Community information |
+| `codegraph://stats` | Graph statistics |
 
-## 💬 MCP Prompts (6種)
+## 💬 MCP Prompts (6)
 
-| Prompt | 説明 | 引数 |
-|--------|------|------|
-| `code_review` | コードレビュー実施 | `entity_id`, `focus_areas` |
-| `explain_codebase` | コードベース説明 | `scope`, `detail_level` |
-| `implement_feature` | 機能実装ガイド | `feature_description`, `constraints` |
-| `debug_issue` | デバッグ支援 | `issue_description`, `context` |
-| `refactor_guidance` | リファクタリングガイド | `entity_id`, `goal` |
-| `test_generation` | テスト生成 | `entity_id`, `test_type` |
+| Prompt | Description | Arguments |
+|--------|-------------|-----------|
+| `code_review` | Perform code review | `entity_id`, `focus_areas` |
+| `explain_codebase` | Explain codebase | `scope`, `detail_level` |
+| `implement_feature` | Feature implementation guide | `feature_description`, `constraints` |
+| `debug_issue` | Debug assistance | `issue_description`, `context` |
+| `refactor_guidance` | Refactoring guide | `entity_id`, `goal` |
+| `test_generation` | Test generation | `entity_id`, `test_type` |
 
-## 使用例
+## Usage Examples
 
-### AIアシスタントとの対話例
+### Conversation with AI Assistant
 
 ```
-You: UserService クラスの依存関係を教えて
+You: What are the dependencies of the UserService class?
 
-AI: [find_dependencies ツールを使用]
-    UserService は以下に依存しています:
+AI: [Using find_dependencies tool]
+    UserService depends on:
     - DatabaseConnection (database.py)
     - Logger (utils/logging.py)
     - UserRepository (repositories/user.py)
 ```
 
 ```
-You: authenticate メソッドを変更した場合の影響範囲は？
+You: What would be affected if I modify the authenticate method?
 
-AI: [find_callers ツールを使用]
-    authenticate の呼び出し元:
+AI: [Using find_callers tool]
+    Callers of authenticate:
     - LoginController.login() (controllers/auth.py:45)
     - APIMiddleware.verify_token() (middleware/api.py:23)
     - TestUserService.test_auth() (tests/test_user.py:78)
 ```
 
 ```
-You: このプロジェクトの主要なコンポーネントを説明して
+You: Explain the main components of this project
 
-AI: [global_search ツールを使用]
-    [explain_codebase プロンプトを使用]
+AI: [Using global_search tool]
+    [Using explain_codebase prompt]
     
-    このプロジェクトは3層アーキテクチャで構成されています:
-    1. Controllers層: HTTPリクエストの処理
-    2. Services層: ビジネスロジック
-    3. Repositories層: データアクセス
+    This project uses a 3-tier architecture:
+    1. Controllers layer: HTTP request handling
+    2. Services layer: Business logic
+    3. Repositories layer: Data access
 ```
 
-## 開発
+## Development
 
-### テスト実行
+### Run Tests
 
 ```bash
-# 全テスト実行
+# Run all tests
 pytest
 
-# カバレッジ付き
+# With coverage
 pytest --cov=src/codegraph_mcp --cov-report=html
 
-# 特定のテスト
+# Specific tests
 pytest tests/unit/test_parser.py -v
 ```
 
-### リント & フォーマット
+### Lint & Format
 
 ```bash
-# Ruff でリント
+# Lint with Ruff
 ruff check src tests
 
-# Ruff でフォーマット
+# Format with Ruff
 ruff format src tests
 
-# MyPy で型チェック
+# Type check with MyPy
 mypy src
 ```
 
-## アーキテクチャ
+## Architecture
 
 ```
 src/codegraph_mcp/
-├── __init__.py          # パッケージ初期化
-├── __main__.py          # CLI エントリーポイント
-├── server.py            # MCP サーバー
-├── config.py            # 設定管理
-├── core/                # コアロジック
-│   ├── parser.py        # Tree-sitter AST パーサー
-│   ├── graph.py         # NetworkX グラフエンジン
-│   ├── indexer.py       # リポジトリインデクサー
-│   ├── community.py     # コミュニティ検出 (Louvain)
-│   ├── semantic.py      # セマンティック分析
-│   ├── llm.py           # LLM統合 (OpenAI/Anthropic/Local)
-│   └── graphrag.py      # GraphRAG検索エンジン
-├── storage/             # ストレージ層
-│   ├── sqlite.py        # SQLite 永続化
-│   ├── cache.py         # ファイルキャッシュ
-│   └── vectors.py       # ベクトルストア
-├── mcp/                 # MCP インターフェース
+├── __init__.py          # Package initialization
+├── __main__.py          # CLI entry point
+├── server.py            # MCP server
+├── config.py            # Configuration management
+├── core/                # Core logic
+│   ├── parser.py        # Tree-sitter AST parser
+│   ├── graph.py         # NetworkX graph engine
+│   ├── indexer.py       # Repository indexer
+│   ├── community.py     # Community detection (Louvain)
+│   ├── semantic.py      # Semantic analysis
+│   ├── llm.py           # LLM integration (OpenAI/Anthropic/Local)
+│   └── graphrag.py      # GraphRAG search engine
+├── storage/             # Storage layer
+│   ├── sqlite.py        # SQLite persistence
+│   ├── cache.py         # File cache
+│   └── vectors.py       # Vector store
+├── mcp/                 # MCP interface
 │   ├── tools.py         # 14 MCP Tools
 │   ├── resources.py     # 4 MCP Resources
 │   └── prompts.py       # 6 MCP Prompts
-└── languages/           # 言語サポート (11言語)
-    ├── python.py        # Python エクストラクター
-    ├── typescript.py    # TypeScript エクストラクター
-    ├── javascript.py    # JavaScript エクストラクター
-    ├── rust.py          # Rust エクストラクター
-    ├── go.py            # Go エクストラクター
-    ├── java.py          # Java エクストラクター
-    ├── php.py           # PHP エクストラクター
-    ├── csharp.py        # C# エクストラクター
-    ├── cpp.py           # C++ エクストラクター
-    ├── hcl.py           # HCL (Terraform) エクストラクター
-    └── ruby.py          # Ruby エクストラクター
+└── languages/           # Language support (12 languages)
+    ├── python.py        # Python extractor
+    ├── typescript.py    # TypeScript extractor
+    ├── javascript.py    # JavaScript extractor
+    ├── rust.py          # Rust extractor
+    ├── go.py            # Go extractor
+    ├── java.py          # Java extractor
+    ├── php.py           # PHP extractor
+    ├── csharp.py        # C# extractor
+    ├── c.py             # C extractor
+    ├── cpp.py           # C++ extractor
+    ├── hcl.py           # HCL (Terraform) extractor
+    └── ruby.py          # Ruby extractor
 ```
 
-## パフォーマンス
+## Performance
 
-### 実測値 (v0.3.0)
+### Measured Values (v0.3.0)
 
-| メトリクス | 実測値 | 備考 |
-|-----------|--------|------|
-| インデックス速度 | **32 エンティティ/秒** | 67ファイル, 941エンティティ |
-| ファイル処理速度 | **0.44秒/ファイル** | Python/TS/Rust混在 |
-| 増分インデックス | **< 2秒** | 変更ファイルのみ |
-| クエリレスポンス | **< 2ms** | グラフ検索 |
+| Metric | Measured | Notes |
+|--------|----------|-------|
+| Indexing speed | **32 entities/sec** | 67 files, 941 entities |
+| File processing speed | **0.44 sec/file** | Python/TS/Rust mixed |
+| Incremental index | **< 2 sec** | Changed files only |
+| Query response | **< 2ms** | Graph search |
 
-### 目標値
+### Target Values
 
-| メトリクス | 目標値 |
-|-----------|--------|
-| 初回インデックス (10万行) | < 30秒 |
-| 増分インデックス | < 2秒 |
-| クエリレスポンス | < 500ms |
-| 起動時間 | < 2秒 |
-| メモリ使用量 | < 500MB |
+| Metric | Target |
+|--------|--------|
+| Initial index (100K lines) | < 30 sec |
+| Incremental index | < 2 sec |
+| Query response | < 500ms |
+| Startup time | < 2 sec |
+| Memory usage | < 500MB |
 
-## ライセンス
+## License
 
-MIT License - [LICENSE](LICENSE) を参照
+MIT License - See [LICENSE](LICENSE)
 
-## 謝辞
+## Acknowledgments
 
-- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP仕様
-- [Tree-sitter](https://tree-sitter.github.io/) - AST解析
-- [NetworkX](https://networkx.org/) - グラフアルゴリズム
-- [Microsoft GraphRAG](https://github.com/microsoft/graphrag) - GraphRAGコンセプト
+- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
+- [Tree-sitter](https://tree-sitter.github.io/) - AST analysis
+- [NetworkX](https://networkx.org/) - Graph algorithms
+- [Microsoft GraphRAG](https://github.com/microsoft/graphrag) - GraphRAG concept
 
-## 関連リンク
+## Related Links
 
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
