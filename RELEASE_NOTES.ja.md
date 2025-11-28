@@ -2,39 +2,37 @@
 
 **Release Date**: 2025-11-27
 
-[🇯🇵 日本語版](RELEASE_NOTES.ja.md)
-
 ## 🇨 C Language Support Release
 
-CodeGraphMCPServer v0.7.1 adds C language (`.c` file) support, bringing the total number of supported languages to 12.
+CodeGraphMCPServer v0.7.1は、C言語（`.c`ファイル）のサポートを追加し、対応言語数が12言語になりました。
 
 ---
 
-## ✨ New Features
+## ✨ 新機能
 
 ### C Language Support
 
 ```bash
-# Index a C language project
+# C言語プロジェクトのインデックス作成
 codegraph-mcp index /path/to/c-project --full
 
-# Example: Linux Kernel kernel/ directory
+# Linux Kernel kernel/ディレクトリの例
 # 54,748 entities, 142,532 relations in 5.77s
 ```
 
-**Supported extensions:**
+**対応拡張子:**
 - `.c` - Pure C source files (NEW)
 - `.cpp`, `.cc`, `.cxx` - C++ source files
 - `.h`, `.hpp`, `.hxx` - Header files
 
-**Verified large-scale C projects:**
-| Project | Files | Entities | Relations | Time |
-|---------|-------|----------|-----------|------|
+**検証済み大規模Cプロジェクト:**
+| プロジェクト | ファイル数 | エンティティ数 | リレーション数 | 時間 |
+|-------------|-----------|--------------|--------------|------|
 | Linux Kernel (kernel/) | 596 | 54,748 | 142,532 | 5.77s |
 
 ---
 
-## 📈 Version History
+## 📈 バージョン履歴
 
 | Version | Date | Highlights | Languages | Tests |
 |---------|------|------------|-----------|-------|
@@ -51,10 +49,10 @@ codegraph-mcp index /path/to/c-project --full
 
 ---
 
-## 🌐 Supported Languages (12)
+## 🌐 対応言語（12言語）
 
-| Language | Extensions | Class | Function | Method |
-|----------|------------|-------|----------|--------|
+| 言語 | 拡張子 | クラス | 関数 | メソッド |
+|------|--------|--------|------|----------|
 | Python | .py, .pyi | ✅ | ✅ | ✅ |
 | TypeScript | .ts, .tsx | ✅ | ✅ | ✅ |
 | JavaScript | .js, .jsx | ✅ | ✅ | ✅ |
@@ -70,7 +68,7 @@ codegraph-mcp index /path/to/c-project --full
 
 ---
 
-## 🔗 Links
+## 🔗 リンク
 
 - **GitHub**: https://github.com/nahisaho/CodeGraphMCPServer
 - **PyPI**: https://pypi.org/project/codegraph-mcp-server/
