@@ -336,15 +336,15 @@ def register(server: Server, config: Config) -> None:
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-        """Handle tool calls with proper error handling."""
-        from codegraph_mcp.core.graph import GraphEngine
+        """Handle tool calls with proper error handling and connection pooling."""
+        from codegraph_mcp.core.engine_manager import EngineManager
 
         logger.info(f"Tool call: {name}")
 
-        engine = GraphEngine(config.repo_path)
-
         try:
-            await engine.initialize()
+            # Use singleton EngineManager for connection pooling
+            manager = await EngineManager.get_instance(config.repo_path)
+            engine = await manager.get_engine()
         except FileNotFoundError as e:
             logger.error(f"Database not found: {e}")
             return [TextContent(
@@ -381,8 +381,7 @@ def register(server: Server, config: Config) -> None:
                 type="text",
                 text=str({"error": f"Internal error: {type(e).__name__}"})
             )]
-        finally:
-            await engine.close()
+        # Note: No finally/close - EngineManager handles connection lifecycle
 
 
 async def _dispatch_tool(

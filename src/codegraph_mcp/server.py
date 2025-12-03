@@ -60,51 +60,58 @@ async def run_server_async(
     Returns:
         Exit code (0 for success)
     """
+    from codegraph_mcp.core.engine_manager import shutdown_all
+
     config = Config(repo_path=repo_path)
     server = create_server(config)
 
     logger.info(f"Starting CodeGraph MCP Server for {repo_path}")
     logger.info(f"Transport: {transport}")
 
-    if transport == "stdio":
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                server.create_initialization_options(),
-            )
-    elif transport == "sse":
-        # SSE transport implementation (REQ-TRP-003)
-        import uvicorn
-        from mcp.server.sse import SseServerTransport
-        from starlette.applications import Starlette
-        from starlette.responses import Response
-        from starlette.routing import Mount, Route
-
-        sse = SseServerTransport("/messages/")
-
-        async def handle_sse(request: Any) -> Response:
-            async with sse.connect_sse(
-                request.scope, request.receive, request._send
-            ) as streams:
+    try:
+        if transport == "stdio":
+            async with stdio_server() as (read_stream, write_stream):
                 await server.run(
-                    streams[0],
-                    streams[1],
+                    read_stream,
+                    write_stream,
                     server.create_initialization_options(),
                 )
-            return Response()
+        elif transport == "sse":
+            # SSE transport implementation (REQ-TRP-003)
+            import uvicorn
+            from mcp.server.sse import SseServerTransport
+            from starlette.applications import Starlette
+            from starlette.responses import Response
+            from starlette.routing import Mount, Route
 
-        app = Starlette(
-            routes=[
-                Route("/sse", endpoint=handle_sse),
-                Mount("/messages/", app=sse.handle_post_message),
-            ]
-        )
+            sse = SseServerTransport("/messages/")
 
-        logger.info(f"SSE server running on port {port}")
-        config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
-        server_instance = uvicorn.Server(config)
-        await server_instance.serve()
+            async def handle_sse(request: Any) -> Response:
+                async with sse.connect_sse(
+                    request.scope, request.receive, request._send
+                ) as streams:
+                    await server.run(
+                        streams[0],
+                        streams[1],
+                        server.create_initialization_options(),
+                    )
+                return Response()
+
+            app = Starlette(
+                routes=[
+                    Route("/sse", endpoint=handle_sse),
+                    Mount("/messages/", app=sse.handle_post_message),
+                ]
+            )
+
+            logger.info(f"SSE server running on port {port}")
+            config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
+            server_instance = uvicorn.Server(config)
+            await server_instance.serve()
+    finally:
+        # Clean up all engine connections on shutdown
+        logger.info("Shutting down engine connections...")
+        await shutdown_all()
 
     return 0
 
