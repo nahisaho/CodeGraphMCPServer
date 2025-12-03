@@ -1,14 +1,15 @@
 # Technology Stack
 
 **Project**: CodeGraphMCPServer
-**Last Updated**: 2025-12-03
-**Version**: 1.0
+**Last Updated**: 2025-12-04
+**Version**: 1.1
 
 ---
 
 ## Overview
 
-This document defines the approved technology stack for CodeGraphMCPServer. All development MUST use these technologies unless explicitly approved via Phase -1 Gate (Article VIII: Anti-Abstraction).
+CodeGraphMCPServer は MCP (Model Context Protocol) サーバーとして、
+コードベースのグラフ分析と GraphRAG 機能を提供する Python パッケージです。
 
 ---
 
@@ -16,525 +17,252 @@ This document defines the approved technology stack for CodeGraphMCPServer. All 
 
 ### Programming Languages
 
-| Language             | Version        | Usage                        | Notes               |
-| -------------------- | -------------- | ---------------------------- | ------------------- |
-| {{PRIMARY_LANGUAGE}} | {{VERSION}}    | Primary application language | [Notes]             |
-| SQL                  | PostgreSQL 15+ | Database queries             | Via Prisma ORM      |
-| TypeScript           | 5.0+           | Type definitions             | Strict mode enabled |
+| Language | Version | Usage | Notes |
+|----------|---------|-------|-------|
+| **Python** | 3.11+ | メインアプリケーション | asyncio 完全対応 |
+| SQL | SQLite 3 | グラフデータ永続化 | aiosqlite 経由 |
 
 ### Runtime Environment
 
-- **Node.js**: {{NODE_VERSION}}+ (LTS)
-- **Package Manager**: npm {{NPM_VERSION}}+ / pnpm {{PNPM_VERSION}}+
+- **Python**: 3.11+ (LTS)
+- **Package Manager**: pip / uv
+- **Virtual Environment**: venv
 
 ---
 
-## Frontend Stack
+## Core Dependencies
 
-### Framework
+### MCP SDK
 
-**Primary Framework**: {{FRONTEND_FRAMEWORK}}
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **mcp** | >= 1.0.0 | Model Context Protocol SDK |
 
-| Technology             | Version     | Purpose                             |
-| ---------------------- | ----------- | ----------------------------------- |
-| {{FRONTEND_FRAMEWORK}} | {{VERSION}} | [Purpose]                           |
-| React                  | 18+         | UI library (if using Next.js/Remix) |
-| TypeScript             | 5.0+        | Type safety                         |
+### AST Parsing (Tree-sitter)
 
-### UI Components
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **tree-sitter** | >= 0.21.0 | AST パーサーコア |
+| tree-sitter-python | >= 0.21.0 | Python サポート |
+| tree-sitter-typescript | >= 0.21.0 | TypeScript サポート |
+| tree-sitter-javascript | >= 0.21.0 | JavaScript サポート |
+| tree-sitter-rust | >= 0.21.0 | Rust サポート |
+| tree-sitter-go | >= 0.21.0 | Go サポート |
+| tree-sitter-java | >= 0.21.0 | Java サポート |
+| tree-sitter-php | >= 0.21.0 | PHP サポート |
+| tree-sitter-c-sharp | >= 0.21.0 | C# サポート |
+| tree-sitter-cpp | >= 0.21.0 | C/C++ サポート |
+| tree-sitter-hcl | >= 0.21.0 | HCL (Terraform) サポート |
+| tree-sitter-ruby | >= 0.21.0 | Ruby サポート |
 
-| Library        | Version     | Purpose              |
-| -------------- | ----------- | -------------------- |
-| {{UI_LIBRARY}} | {{VERSION}} | Component library    |
-| Tailwind CSS   | 3.0+        | Utility-first CSS    |
-| shadcn/ui      | Latest      | Component primitives |
+### Database & Storage
 
-### State Management
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **aiosqlite** | >= 0.19.0 | 非同期 SQLite アクセス |
 
-| Library           | Version     | Purpose                       |
-| ----------------- | ----------- | ----------------------------- |
-| {{STATE_LIBRARY}} | {{VERSION}} | [Global state / Server state] |
-| React Context     | Built-in    | Local state                   |
-| React Query       | 5.0+        | Server state (if applicable)  |
+### Data Validation
 
-### Form Handling
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **pydantic** | >= 2.0.0 | データバリデーション |
+| **pydantic-settings** | >= 2.0.0 | 設定管理 |
 
-| Library         | Version | Purpose           |
-| --------------- | ------- | ----------------- |
-| React Hook Form | 7.0+    | Form management   |
-| Zod             | 3.0+    | Schema validation |
+### Graph Algorithms
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **networkx** | >= 3.0 | グラフアルゴリズム (Louvain等) |
+
+### CLI & Display
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **typer** | >= 0.9.0 | CLI フレームワーク |
+| **rich** | >= 13.0.0 | ターミナル表示 |
+
+### Utilities
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **numpy** | >= 1.24.0 | ベクトル演算 |
+| **tiktoken** | >= 0.5.0 | トークンカウント |
+| **watchfiles** | >= 0.21.0 | ファイル監視 |
+| **gitpython** | >= 3.1.0 | Git 操作 |
 
 ---
 
-## Backend Stack
+## Optional Dependencies
 
-### Framework
+### Local Embeddings
 
-**Primary Framework**: {{BACKEND_FRAMEWORK}}
-
-| Technology            | Version     | Purpose                           |
-| --------------------- | ----------- | --------------------------------- |
-| {{BACKEND_FRAMEWORK}} | {{VERSION}} | API server                        |
-| Express               | 4.0+        | Web framework (if using Node.js)  |
-| Next.js API Routes    | 14+         | Serverless API (if using Next.js) |
-
-### API Technologies
-
-| Technology | Version    | Purpose               |
-| ---------- | ---------- | --------------------- |
-| REST       | -          | Primary API style     |
-| GraphQL    | (Optional) | Complex data fetching |
-| OpenAPI    | 3.0+       | API specification     |
-
----
-
-## Database Stack
-
-### Primary Database
-
-**Database**: {{DATABASE}}
-
-| Technology   | Version     | Purpose            |
-| ------------ | ----------- | ------------------ |
-| {{DATABASE}} | {{VERSION}} | Primary data store |
-| Prisma       | 5.0+        | ORM and migrations |
-
-### Database Schema
-
-```prisma
-// Example schema structure
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+```bash
+pip install codegraph-mcp-server[embeddings]
 ```
 
-### Caching Layer
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| sentence-transformers | >= 2.2.0 | ローカル埋め込みモデル |
 
-| Technology      | Version | Purpose                  |
-| --------------- | ------- | ------------------------ |
-| Redis           | 7.0+    | Session storage, caching |
-| In-memory cache | -       | Development only         |
+### OpenAI Integration
 
----
-
-## Authentication & Authorization
-
-### Authentication
-
-| Technology      | Version     | Purpose                           |
-| --------------- | ----------- | --------------------------------- |
-| {{AUTH_METHOD}} | {{VERSION}} | User authentication               |
-| bcrypt          | 5.0+        | Password hashing (cost factor 12) |
-| JWT             | -           | Session tokens                    |
-
-**Password Requirements**:
-
-- Hashing: bcrypt with cost factor 12 (Article III: Security)
-- Minimum length: 12 characters
-- Complexity: Uppercase, lowercase, number, special char
-
-### Authorization
-
-| Technology | Version | Purpose                          |
-| ---------- | ------- | -------------------------------- |
-| RBAC       | -       | Role-Based Access Control        |
-| CASL       | 6.0+    | Authorization library (optional) |
-
----
-
-## Testing Stack
-
-### Test Frameworks
-
-| Technology         | Version     | Purpose                                      |
-| ------------------ | ----------- | -------------------------------------------- |
-| {{TEST_FRAMEWORK}} | {{VERSION}} | Unit testing                                 |
-| Jest               | 29+         | Test runner (if using JavaScript/TypeScript) |
-| Vitest             | 1.0+        | Fast test runner (alternative to Jest)       |
-
-### Testing Libraries
-
-| Library               | Version | Purpose               |
-| --------------------- | ------- | --------------------- |
-| React Testing Library | 14+     | Component testing     |
-| Supertest             | 6.0+    | API testing           |
-| Playwright            | 1.40+   | E2E testing           |
-| Testing Library       | Latest  | DOM testing utilities |
-
-### Test Databases
-
-- **Integration Tests**: Real PostgreSQL (Docker container)
-- **Unit Tests**: Mocked repository layer
-- **E2E Tests**: Dedicated test database
-
-**Docker Compose** for test services:
-
-```yaml
-services:
-  test-db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_PASSWORD: test
-      POSTGRES_DB: test
-    ports:
-      - '5432:5432'
-
-  test-redis:
-    image: redis:7-alpine
-    ports:
-      - '6379:6379'
+```bash
+pip install codegraph-mcp-server[openai]
 ```
 
-**Constitutional Compliance (Article IX)**:
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| openai | >= 1.0.0 | OpenAI API 統合 |
 
-- Integration tests MUST use real database
-- Integration tests MUST use real cache
-- Mocks only for external APIs without test environments
+### SSE Transport
+
+```bash
+pip install codegraph-mcp-server[sse]
+```
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| starlette | >= 0.27.0 | ASGI フレームワーク |
+| uvicorn | >= 0.23.0 | ASGI サーバー |
 
 ---
 
-## Build & Development Tools
+## Development Dependencies
 
-### Build Tools
+```bash
+pip install codegraph-mcp-server[dev]
+```
 
-| Tool           | Version     | Purpose               |
-| -------------- | ----------- | --------------------- |
-| {{BUILD_TOOL}} | {{VERSION}} | Build system          |
-| esbuild        | Latest      | Fast bundler          |
-| Turbo          | Latest      | Monorepo build system |
+### Testing
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **pytest** | >= 7.0.0 | テストフレームワーク |
+| **pytest-asyncio** | >= 0.21.0 | 非同期テスト |
+| **pytest-cov** | >= 4.0.0 | カバレッジ計測 |
 
 ### Code Quality
 
-| Tool        | Version | Purpose                       |
-| ----------- | ------- | ----------------------------- |
-| ESLint      | 8.0+    | JavaScript/TypeScript linting |
-| Prettier    | 3.0+    | Code formatting               |
-| TypeScript  | 5.0+    | Type checking                 |
-| Husky       | 8.0+    | Git hooks                     |
-| lint-staged | 14.0+   | Pre-commit linting            |
-
-**ESLint Configuration**:
-
-```json
-{
-  "extends": ["next/core-web-vitals", "plugin:@typescript-eslint/recommended", "prettier"],
-  "rules": {
-    "@typescript-eslint/no-unused-vars": "error",
-    "@typescript-eslint/no-explicit-any": "warn"
-  }
-}
-```
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **ruff** | >= 0.1.0 | Linter & Formatter |
+| **mypy** | >= 1.0.0 | 型チェック |
+| **pre-commit** | >= 3.0.0 | Git フック |
 
 ---
 
 ## CI/CD Stack
 
-### CI/CD Platform
+### GitHub Actions
 
-| Technology         | Version | Purpose                           |
-| ------------------ | ------- | --------------------------------- |
-| {{CI_CD_PLATFORM}} | -       | Continuous Integration/Deployment |
-| GitHub Actions     | -       | CI/CD workflows                   |
-| GitLab CI          | -       | Alternative CI/CD                 |
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | push/PR | テスト・リント実行 |
+| `release.yml` | tag `v*` | PyPI 公開 |
 
 ### Deployment
 
-| Technology     | Version | Purpose                        |
-| -------------- | ------- | ------------------------------ |
-| Docker         | 24.0+   | Containerization               |
-| Docker Compose | 2.0+    | Multi-container apps (dev)     |
-| Kubernetes     | 1.28+   | Container orchestration (prod) |
+| Technology | Purpose |
+|------------|---------|
+| **PyPI** | パッケージ配布 |
+| **GitHub Releases** | リリース管理 |
 
 ---
 
-## Cloud Infrastructure
+## Architecture Decisions (ADRs)
 
-### Cloud Provider
-
-**Primary Provider**: {{CLOUD_PROVIDER}}
-
-| Service              | Purpose             |
-| -------------------- | ------------------- |
-| {{COMPUTE_SERVICE}}  | Application hosting |
-| {{DATABASE_SERVICE}} | Managed database    |
-| {{STORAGE_SERVICE}}  | Object storage      |
-| {{CACHE_SERVICE}}    | Managed Redis       |
-
-### Infrastructure as Code
-
-| Technology   | Version     | Purpose                     |
-| ------------ | ----------- | --------------------------- |
-| {{IAC_TOOL}} | {{VERSION}} | Infrastructure provisioning |
-| Terraform    | 1.6+        | Cloud infrastructure        |
-| Bicep        | Latest      | Azure infrastructure        |
+| ADR | Decision | Rationale |
+|-----|----------|-----------|
+| ADR-001 | Library-First | 再利用可能なコア機能 |
+| ADR-002 | SQLite Storage | 外部 DB 不要、ゼロ設定 |
+| ADR-003 | Tree-sitter | 高速・正確な AST 解析 |
+| ADR-004 | MCP SDK | 標準プロトコル準拠 |
+| ADR-005 | NetworkX | 豊富なグラフアルゴリズム |
+| ADR-006 | Pydantic | 型安全な設定・バリデーション |
 
 ---
 
-## Monitoring & Observability
+## Configuration
 
-### Logging
+### pyproject.toml
 
-| Technology       | Version     | Purpose                       |
-| ---------------- | ----------- | ----------------------------- |
-| {{LOGGING_TOOL}} | {{VERSION}} | Log aggregation               |
-| Winston          | 3.0+        | Application logging (Node.js) |
-| Pino             | 8.0+        | Fast logging (alternative)    |
+パッケージ設定、依存関係、ツール設定を一元管理:
 
-**Log Format**: JSON
+- **[project]**: パッケージメタデータ
+- **[project.dependencies]**: 本番依存関係
+- **[project.optional-dependencies]**: オプション依存関係
+- **[tool.pytest]**: テスト設定
+- **[tool.ruff]**: Linter/Formatter 設定
+- **[tool.mypy]**: 型チェック設定
+- **[tool.coverage]**: カバレッジ設定
 
-```typescript
-// Example log entry
-{
-  "timestamp": "2025-11-16T10:00:00Z",
-  "level": "info",
-  "message": "User logged in",
-  "context": {
-    "userId": "uuid",
-    "ip": "192.168.1.1"
-  },
-  "traceId": "trace-id"
-}
+### 環境変数
+
+| 変数 | 説明 | デフォルト |
+|------|------|-----------|
+| `CODEGRAPH_REPO_PATH` | リポジトリパス | `.` |
+| `CODEGRAPH_DB_PATH` | DB パス | `.codegraph/graph.db` |
+| `CODEGRAPH_LOG_LEVEL` | ログレベル | `INFO` |
+| `OPENAI_API_KEY` | OpenAI API キー | - |
+| `ANTHROPIC_API_KEY` | Anthropic API キー | - |
+
+---
+
+## Performance Characteristics
+
+### 測定値 (v0.7.2)
+
+| 指標 | 測定値 | 備考 |
+|------|--------|------|
+| インデックス速度 | 32 entities/sec | 69ファイル、1,004エンティティ |
+| インクリメンタル | < 2 sec | 変更ファイルのみ |
+| クエリ応答 | < 2ms | グラフ検索 |
+
+### 目標値
+
+| 指標 | 目標 |
+|------|------|
+| 初回インデックス (100K行) | < 30 sec |
+| インクリメンタル | < 2 sec |
+| クエリ応答 | < 500ms |
+| 起動時間 | < 2 sec |
+| メモリ使用量 | < 500MB |
+
+---
+
+## Supported Languages (12)
+
+| Language | Extension | Extractor |
+|----------|-----------|-----------|
+| Python | `.py`, `.pyi` | PythonExtractor |
+| TypeScript | `.ts`, `.tsx` | TypeScriptExtractor |
+| JavaScript | `.js`, `.jsx` | JavaScriptExtractor |
+| Rust | `.rs` | RustExtractor |
+| Go | `.go` | GoExtractor |
+| Java | `.java` | JavaExtractor |
+| PHP | `.php` | PHPExtractor |
+| C# | `.cs` | CSharpExtractor |
+| C/C++ | `.c`, `.cpp`, `.h` | CppExtractor |
+| HCL | `.tf`, `.hcl` | HCLExtractor |
+| Ruby | `.rb` | RubyExtractor |
+
+---
+
+## Security
+
+### 依存関係スキャン
+
+```bash
+pip audit                    # 脆弱性スキャン
 ```
 
-### Monitoring
+### シークレット管理
 
-| Technology          | Version     | Purpose                |
-| ------------------- | ----------- | ---------------------- |
-| {{MONITORING_TOOL}} | {{VERSION}} | Application monitoring |
-| Prometheus          | 2.0+        | Metrics collection     |
-| Grafana             | 10.0+       | Metrics visualization  |
-
-### Tracing
-
-| Technology       | Version     | Purpose             |
-| ---------------- | ----------- | ------------------- |
-| {{TRACING_TOOL}} | {{VERSION}} | Distributed tracing |
-| OpenTelemetry    | Latest      | Tracing standard    |
-| Jaeger           | 1.50+       | Tracing backend     |
-
-### Error Tracking
-
-| Technology | Version | Purpose                      |
-| ---------- | ------- | ---------------------------- |
-| Sentry     | Latest  | Error tracking and reporting |
+- `.env` ファイル (ローカル開発)
+- 環境変数 (本番環境)
+- `.gitignore` で `.env` を除外
 
 ---
 
-## Documentation Tools
-
-### API Documentation
-
-| Tool               | Version | Purpose                |
-| ------------------ | ------- | ---------------------- |
-| OpenAPI/Swagger    | 3.0+    | REST API documentation |
-| GraphQL Playground | -       | GraphQL API explorer   |
-| Postman            | Latest  | API testing and docs   |
-
-### Code Documentation
-
-| Tool      | Version | Purpose                  |
-| --------- | ------- | ------------------------ |
-| TSDoc     | -       | TypeScript documentation |
-| JSDoc     | -       | JavaScript documentation |
-| Storybook | 7.0+    | Component documentation  |
-
----
-
-## Development Tools
-
-### Code Editors
-
-- **Recommended**: Visual Studio Code
-- **Extensions**:
-  - ESLint
-  - Prettier
-  - TypeScript
-  - Prisma
-  - Tailwind CSS IntelliSense
-
-### Database Tools
-
-| Tool          | Version  | Purpose               |
-| ------------- | -------- | --------------------- |
-| Prisma Studio | Built-in | Database GUI          |
-| pgAdmin       | 4.0+     | PostgreSQL admin      |
-| TablePlus     | Latest   | Multi-database client |
-
-### API Testing
-
-| Tool     | Version | Purpose                  |
-| -------- | ------- | ------------------------ |
-| Postman  | Latest  | API testing              |
-| Insomnia | Latest  | REST/GraphQL client      |
-| curl     | -       | Command-line API testing |
-
----
-
-## Security Tools
-
-### Security Scanning
-
-| Tool      | Version  | Purpose                           |
-| --------- | -------- | --------------------------------- |
-| npm audit | Built-in | Dependency vulnerability scanning |
-| Snyk      | Latest   | Continuous security monitoring    |
-| OWASP ZAP | Latest   | Security testing                  |
-
-### Secrets Management
-
-| Tool                | Version     | Purpose                    |
-| ------------------- | ----------- | -------------------------- |
-| {{SECRETS_TOOL}}    | {{VERSION}} | Secrets management         |
-| .env files          | -           | Local development secrets  |
-| AWS Secrets Manager | -           | Production secrets (AWS)   |
-| Azure Key Vault     | -           | Production secrets (Azure) |
-
----
-
-## Package Management
-
-### Dependency Management
-
-```json
-// package.json structure
-{
-  "name": "CodeGraphMCPServer",
-  "version": "1.0.0",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "test": "jest",
-    "lint": "eslint .",
-    "format": "prettier --write ."
-  },
-  "dependencies": {
-    // Production dependencies
-  },
-  "devDependencies": {
-    // Development dependencies
-  }
-}
-```
-
-### Version Pinning
-
-- **Exact Versions**: Critical dependencies (database drivers, auth libraries)
-- **Caret Ranges**: UI libraries, utilities (`^1.2.3`)
-- **Lock Files**: Commit `package-lock.json` / `pnpm-lock.yaml`
-
----
-
-## Framework-Specific Configurations
-
-### {{PRIMARY_FRAMEWORK}} Configuration
-
-[Include framework-specific configuration details]
-
-**Example for Next.js**:
-
-```typescript
-// next.config.js
-const nextConfig = {
-  reactStrictMode: true,
-  typescript: {
-    ignoreBuildErrors: false,
-  },
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
-  experimental: {
-    serverActions: true,
-  },
-};
-
-export default nextConfig;
-```
-
----
-
-## Anti-Abstraction Policy (Article VIII)
-
-**CRITICAL**: Use framework APIs directly. Do NOT create custom abstraction layers.
-
-### ✅ Allowed
-
-```typescript
-// Use Prisma directly
-const user = await prisma.user.findUnique({ where: { id } });
-
-// Use bcrypt directly
-const hash = await bcrypt.hash(password, 12);
-
-// Use Next.js API routes directly
-export async function POST(request: Request) { ... }
-```
-
-### ❌ Prohibited (Without Phase -1 Gate Approval)
-
-```typescript
-// ❌ Custom database wrapper
-class MyDatabase {
-  async find(id: string) { ... }  // Wrapping Prisma
-}
-
-// ❌ Custom HTTP client
-class MyHttpClient {
-  async get(url: string) { ... }  // Wrapping fetch
-}
-```
-
-**Exception**: Multi-framework support or justified architectural need requires Phase -1 Gate approval with:
-
-1. Multi-framework justification
-2. Team expertise analysis
-3. Migration path documentation
-4. Approval from @system-architect + @software-developer
-
----
-
-## Technology Selection Criteria
-
-When evaluating new technologies:
-
-1. **Community Support**: Active maintenance, large community
-2. **Documentation**: Comprehensive, up-to-date
-3. **Type Safety**: TypeScript support preferred
-4. **Performance**: Benchmarked performance metrics
-5. **Security**: Regular security updates
-6. **License**: Compatible with project (MIT, Apache 2.0 preferred)
-7. **Team Expertise**: Team familiarity with technology
-8. **Constitutional Alignment**: Supports Library-First, Test-First principles
-
----
-
-## Deprecated Technologies
-
-| Technology | Deprecated Date | Replacement | Migration Deadline |
-| ---------- | --------------- | ----------- | ------------------ |
-| [Old Tech] | [Date]          | [New Tech]  | [Date]             |
-
----
-
-## Changelog
-
-### Version 1.1 (Planned)
-
-- [Planned technology updates]
-
----
-
-**Last Updated**: 2025-12-03
-**Maintained By**: {{MAINTAINER}}
+**Last Updated**: 2025-12-04
+**Maintained By**: GitHub Copilot / nahisaho

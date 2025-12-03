@@ -1,17 +1,18 @@
 # Project Structure
 
 **Project**: CodeGraphMCPServer
-**Last Updated**: 2025-12-03
-**Version**: 1.0
+**Last Updated**: 2025-12-04
+**Version**: 1.1
 
 ---
 
 ## Architecture Pattern
 
-**Primary Pattern**: {{ARCHITECTURE_PATTERN}}
+**Primary Pattern**: Library-First MCP Server
 
-> [Description of the architecture pattern used in this project]
-> Examples: Monorepo with Library-First, Microservices, Modular Monolith, Serverless
+> Python ベースの MCP (Model Context Protocol) サーバー。
+> Tree-sitter による AST 解析、NetworkX によるグラフ分析、SQLite によるストレージを組み合わせた
+> コードグラフ分析エンジンを提供。
 
 ---
 
@@ -21,388 +22,233 @@
 
 ```
 CodeGraphMCPServer/
-├── lib/                  # Reusable libraries (Article I: Library-First)
-├── app/                  # Application code (Next.js, etc.)
-├── api/                  # API routes/controllers
-├── components/           # UI components
-├── services/             # Business logic services
-├── tests/                # Test suites
-├── docs/                 # Documentation
-├── storage/              # SDD artifacts
-│   ├── specs/            # Requirements, design, tasks
-│   ├── changes/          # Delta specifications (brownfield)
-│   └── validation/       # Validation reports
-├── steering/             # Project memory (this directory)
-│   ├── structure.md      # This file
-│   ├── tech.md           # Technology stack
-│   ├── product.md        # Product context
-│   └── rules/            # Constitutional governance
-├── templates/            # Document templates
-└── [Other directories]
+├── src/codegraph_mcp/       # メインパッケージ (Library-First)
+│   ├── core/                # コアロジック層
+│   ├── storage/             # ストレージ層
+│   ├── mcp/                 # MCP インターフェース層
+│   ├── languages/           # 言語サポート (12言語)
+│   └── utils/               # ユーティリティ
+├── tests/                   # テストスイート
+│   ├── unit/                # ユニットテスト (260件)
+│   ├── integration/         # 結合テスト (39件)
+│   └── fixtures/            # テストデータ
+├── examples/                # 使用例
+├── storage/                 # SDD アーティファクト
+│   ├── specs/               # 仕様書 (requirements, design, tasks)
+│   ├── changes/             # 変更仕様 (brownfield)
+│   └── features/            # 機能追跡
+├── steering/                # プロジェクトメモリ
+│   ├── structure.md         # このファイル
+│   ├── tech.md              # 技術スタック
+│   ├── product.md           # プロダクトコンテキスト
+│   └── rules/               # 憲法的ガバナンス
+├── References/              # 設計リファレンス
+├── templates/               # ドキュメントテンプレート
+├── .github/workflows/       # CI/CD (GitHub Actions)
+├── pyproject.toml           # パッケージ設定
+└── README.md                # プロジェクト説明
 ```
 
 ---
 
-## Library-First Pattern (Article I)
+## Core Package Structure
 
-All features begin as independent libraries in `lib/`.
-
-### Library Structure
-
-Each library follows this structure:
+### src/codegraph_mcp/ (メインパッケージ)
 
 ```
-lib/{{feature}}/
-├── src/
-│   ├── index.ts          # Public API exports
-│   ├── service.ts        # Business logic
-│   ├── repository.ts     # Data access
-│   ├── types.ts          # TypeScript types
-│   ├── errors.ts         # Custom errors
-│   └── validators.ts     # Input validation
-├── tests/
-│   ├── service.test.ts   # Unit tests
-│   ├── repository.test.ts # Integration tests (real DB)
-│   └── integration.test.ts # E2E tests
-├── cli.ts                # CLI interface (Article II)
-├── package.json          # Library metadata
-├── tsconfig.json         # TypeScript config
-└── README.md             # Library documentation
+src/codegraph_mcp/
+├── __init__.py              # パッケージ初期化、バージョン管理
+├── __main__.py              # CLI エントリーポイント (codegraph-mcp)
+├── server.py                # MCP サーバー実装
+├── config.py                # Pydantic Settings 設定管理
+│
+├── core/                    # コアロジック層
+│   ├── parser.py            # Tree-sitter AST パーサー
+│   ├── graph.py             # NetworkX グラフエンジン
+│   ├── indexer.py           # リポジトリインデクサー
+│   ├── community.py         # コミュニティ検出 (Louvain)
+│   ├── semantic.py          # セマンティック分析
+│   ├── graphrag.py          # GraphRAG 検索エンジン
+│   ├── llm.py               # LLM 統合 (OpenAI/Anthropic)
+│   └── types.py             # 共通型定義
+│
+├── storage/                 # ストレージ層
+│   ├── sqlite.py            # SQLite 永続化
+│   ├── cache.py             # ファイルキャッシュ
+│   └── vectors.py           # ベクトルストア
+│
+├── mcp/                     # MCP インターフェース層
+│   ├── tools.py             # 14 MCP ツール
+│   ├── resources.py         # 4 MCP リソース
+│   └── prompts.py           # 6 MCP プロンプト
+│
+├── languages/               # 言語サポート (12言語)
+│   ├── config.py            # 言語設定、BaseExtractor
+│   ├── python.py            # Python
+│   ├── typescript.py        # TypeScript
+│   ├── javascript.py        # JavaScript
+│   ├── rust.py              # Rust
+│   ├── go.py                # Go
+│   ├── java.py              # Java
+│   ├── php.py               # PHP
+│   ├── csharp.py            # C#
+│   ├── cpp.py               # C/C++
+│   ├── hcl.py               # HCL (Terraform)
+│   └── ruby.py              # Ruby
+│
+└── utils/                   # ユーティリティ
+    ├── git.py               # Git 操作
+    └── logging.py           # ロギング設定
 ```
-
-### Library Guidelines
-
-- **Independence**: Libraries MUST NOT depend on application code
-- **Public API**: All exports via `src/index.ts`
-- **Testing**: Independent test suite
-- **CLI**: All libraries expose CLI interface (Article II)
 
 ---
 
-## Application Structure
+## Layer Architecture
 
-### Application Organization
-
-```
-app/
-├── (auth)/               # Route groups (Next.js App Router)
-│   ├── login/
-│   │   └── page.tsx
-│   └── register/
-│       └── page.tsx
-├── dashboard/
-│   └── page.tsx
-├── api/                  # API routes
-│   ├── auth/
-│   │   └── route.ts
-│   └── users/
-│       └── route.ts
-├── layout.tsx            # Root layout
-└── page.tsx              # Home page
-```
-
-### Application Guidelines
-
-- **Library Usage**: Applications import from `lib/` modules
-- **Thin Controllers**: API routes delegate to library services
-- **No Business Logic**: Business logic belongs in libraries
-
----
-
-## Component Organization
-
-### UI Components
+### 3層アーキテクチャ
 
 ```
-components/
-├── ui/                   # Base UI components (shadcn/ui)
-│   ├── button.tsx
-│   ├── input.tsx
-│   └── card.tsx
-├── auth/                 # Feature-specific components
-│   ├── LoginForm.tsx
-│   └── RegisterForm.tsx
-├── dashboard/
-│   └── StatsCard.tsx
-└── shared/               # Shared components
-    ├── Header.tsx
-    └── Footer.tsx
+┌─────────────────────────────────────────────────────────┐
+│                   MCP Interface Layer                    │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐ │
+│  │  14 Tools   │  │ 4 Resources  │  │   6 Prompts     │ │
+│  └─────────────┘  └──────────────┘  └─────────────────┘ │
+├─────────────────────────────────────────────────────────┤
+│                      Core Layer                          │
+│  ┌─────────┐ ┌───────┐ ┌─────────┐ ┌─────────────────┐ │
+│  │ Parser  │ │ Graph │ │ Indexer │ │ GraphRAG Engine │ │
+│  └─────────┘ └───────┘ └─────────┘ └─────────────────┘ │
+│  ┌──────────────┐  ┌───────────────┐  ┌──────────────┐ │
+│  │  Community   │  │   Semantic    │  │     LLM      │ │
+│  └──────────────┘  └───────────────┘  └──────────────┘ │
+├─────────────────────────────────────────────────────────┤
+│                    Storage Layer                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
+│  │   SQLite    │  │    Cache    │  │   Vector Store  │ │
+│  └─────────────┘  └─────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
-
-### Component Guidelines
-
-- **Composition**: Prefer composition over props drilling
-- **Types**: All props typed with TypeScript
-- **Tests**: Component tests with React Testing Library
-
----
-
-## Database Organization
-
-### Schema Organization
-
-```
-prisma/
-├── schema.prisma         # Prisma schema
-├── migrations/           # Database migrations
-│   ├── 001_create_users_table/
-│   │   └── migration.sql
-│   └── 002_create_sessions_table/
-│       └── migration.sql
-└── seed.ts               # Database seed data
-```
-
-### Database Guidelines
-
-- **Migrations**: All schema changes via migrations
-- **Naming**: snake_case for tables and columns
-- **Indexes**: Index foreign keys and frequently queried columns
 
 ---
 
 ## Test Organization
 
-### Test Structure
+### テスト構造
 
 ```
 tests/
-├── unit/                 # Unit tests (per library)
-│   └── auth/
-│       └── service.test.ts
-├── integration/          # Integration tests (real services)
-│   └── auth/
-│       └── login.test.ts
-├── e2e/                  # End-to-end tests
-│   └── auth/
-│       └── user-flow.test.ts
-└── fixtures/             # Test data and fixtures
-    └── users.ts
+├── unit/                    # ユニットテスト (260件)
+│   ├── test_parser.py       # パーサーテスト
+│   ├── test_graph.py        # グラフエンジンテスト
+│   ├── test_indexer.py      # インデクサーテスト
+│   ├── test_tools.py        # MCP ツールテスト
+│   ├── test_resources.py    # MCP リソーステスト
+│   ├── test_prompts.py      # MCP プロンプトテスト
+│   ├── test_storage.py      # ストレージテスト
+│   ├── test_cli.py          # CLI テスト
+│   ├── test_graphrag.py     # GraphRAG テスト
+│   ├── test_llm.py          # LLM テスト
+│   └── test_<language>.py   # 各言語エクストラクタテスト
+│
+├── integration/             # 結合テスト (39件)
+│   ├── test_server.py       # サーバー結合テスト
+│   ├── test_mcp_server.py   # MCP プロトコルテスト
+│   ├── test_parser_graph.py # パーサー→グラフ結合テスト
+│   └── test_graphrag_integration.py
+│
+└── fixtures/                # テストフィクスチャ
+    ├── calculator.py        # Python サンプル
+    ├── calculator.cpp       # C++ サンプル
+    └── user.ts              # TypeScript サンプル
 ```
 
-### Test Guidelines
+### テスト基準
 
-- **Test-First**: Tests written BEFORE implementation (Article III)
-- **Real Services**: Integration tests use real DB/cache (Article IX)
-- **Coverage**: Minimum 80% coverage
-- **Naming**: `*.test.ts` for unit, `*.integration.test.ts` for integration
+- **ユニットテスト**: 260件、コアロジックの網羅
+- **結合テスト**: 39件、レイヤー間の連携検証
+- **カバレッジ目標**: 60%以上 (現在 64%)
+- **全テスト合格**: 299件 ✅
 
 ---
 
-## Documentation Organization
+## CodeGraph Index Statistics
 
-### Documentation Structure
+現在のコードベース分析結果:
 
-```
-docs/
-├── architecture/         # Architecture documentation
-│   ├── c4-diagrams/
-│   └── adr/              # Architecture Decision Records
-├── api/                  # API documentation
-│   ├── openapi.yaml
-│   └── graphql.schema
-├── guides/               # Developer guides
-│   ├── getting-started.md
-│   └── contributing.md
-└── runbooks/             # Operational runbooks
-    ├── deployment.md
-    └── troubleshooting.md
-```
+| 指標 | 値 |
+|------|-----|
+| **エンティティ** | 1,004 |
+| **リレーション** | 4,316 |
+| **コミュニティ** | 32 |
+| **ファイル** | 69 |
 
----
+### エンティティ種別
 
-## SDD Artifacts Organization
-
-### Storage Directory
-
-```
-storage/
-├── specs/                # Specifications
-│   ├── auth-requirements.md
-│   ├── auth-design.md
-│   ├── auth-tasks.md
-│   └── payment-requirements.md
-├── changes/              # Delta specifications (brownfield)
-│   ├── add-2fa.md
-│   └── upgrade-jwt.md
-├── features/             # Feature tracking
-│   ├── auth.json
-│   └── payment.json
-└── validation/           # Validation reports
-    ├── auth-validation-report.md
-    └── payment-validation-report.md
-```
+| タイプ | 数 |
+|--------|-----|
+| Module | 69 |
+| Class | 158 |
+| Method | 665 |
+| Function | 109 |
+| Interface | 2 |
+| Struct | 1 |
 
 ---
 
 ## Naming Conventions
 
-### File Naming
+### ファイル命名規則
 
-- **TypeScript**: `PascalCase.tsx` for components, `camelCase.ts` for utilities
-- **React Components**: `PascalCase.tsx` (e.g., `LoginForm.tsx`)
-- **Utilities**: `camelCase.ts` (e.g., `formatDate.ts`)
-- **Tests**: `*.test.ts` or `*.spec.ts`
-- **Constants**: `SCREAMING_SNAKE_CASE.ts` (e.g., `API_ENDPOINTS.ts`)
+- **Python モジュール**: `snake_case.py` (例: `graph_engine.py`)
+- **テスト**: `test_*.py` (例: `test_parser.py`)
+- **設定**: `*.py` または `*.toml`
 
-### Directory Naming
+### クラス・関数命名規則
 
-- **Features**: `kebab-case` (e.g., `user-management/`)
-- **Components**: `kebab-case` or `PascalCase` (consistent within project)
-
-### Variable Naming
-
-- **Variables**: `camelCase`
-- **Constants**: `SCREAMING_SNAKE_CASE`
-- **Types/Interfaces**: `PascalCase`
-- **Enums**: `PascalCase`
+- **クラス**: `PascalCase` (例: `ASTParser`, `GraphEngine`)
+- **関数/メソッド**: `snake_case` (例: `parse_file`, `get_statistics`)
+- **定数**: `SCREAMING_SNAKE_CASE` (例: `LANGUAGE_EXTENSIONS`)
+- **プライベート**: `_` prefix (例: `_walk_tree`, `_engine`)
 
 ---
 
-## Integration Patterns
+## CLI Commands
 
-### Library → Application Integration
+### 利用可能なコマンド
 
-```typescript
-// ✅ CORRECT: Application imports from library
-import { AuthService } from '@/lib/auth';
-
-const authService = new AuthService(repository);
-const result = await authService.login(credentials);
-```
-
-```typescript
-// ❌ WRONG: Library imports from application
-// Libraries must NOT depend on application code
-import { AuthContext } from '@/app/contexts/auth'; // Violation!
-```
-
-### Service → Repository Pattern
-
-```typescript
-// Service layer (business logic)
-export class AuthService {
-  constructor(private repository: UserRepository) {}
-
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
-    // Business logic here
-    const user = await this.repository.findByEmail(credentials.email);
-    // ...
-  }
-}
-
-// Repository layer (data access)
-export class UserRepository {
-  constructor(private prisma: PrismaClient) {}
-
-  async findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email } });
-  }
-}
-```
-
----
-
-## Deployment Structure
-
-### Deployment Units
-
-**Projects** (independently deployable):
-
-1. CodeGraphMCPServer - Main application
-
-> ⚠️ **Simplicity Gate (Article VII)**: Maximum 3 projects initially.
-> If adding more projects, document justification in Phase -1 Gate approval.
-
-### Environment Structure
-
-```
-environments/
-├── development/
-│   └── .env.development
-├── staging/
-│   └── .env.staging
-└── production/
-    └── .env.production
-```
-
----
-
-## Multi-Language Support
-
-### Language Policy
-
-- **Primary Language**: English
-- **Documentation**: English first (`.md`), then Japanese (`.ja.md`)
-- **Code Comments**: English
-- **UI Strings**: i18n framework
-
-### i18n Organization
-
-```
-locales/
-├── en/
-│   ├── common.json
-│   └── auth.json
-└── ja/
-    ├── common.json
-    └── auth.json
+```bash
+codegraph-mcp --version              # バージョン表示
+codegraph-mcp index <path>           # リポジトリインデックス
+codegraph-mcp index <path> --full    # フルインデックス
+codegraph-mcp stats <path>           # 統計表示
+codegraph-mcp query "..." --repo .   # グラフクエリ
+codegraph-mcp community <path>       # コミュニティ検出
+codegraph-mcp watch <path>           # ファイル監視・自動再インデックス
+codegraph-mcp serve --repo <path>    # MCP サーバー起動 (stdio)
+codegraph-mcp start --repo <path>    # MCP サーバー起動 (バックグラウンド)
+codegraph-mcp stop                   # サーバー停止
+codegraph-mcp status                 # サーバー状態確認
 ```
 
 ---
 
 ## Version Control
 
-### Branch Organization
+### ブランチ構成
 
-- `main` - Production branch
-- `develop` - Development branch
-- `feature/*` - Feature branches
-- `hotfix/*` - Hotfix branches
-- `release/*` - Release branches
+- `main` - プロダクションブランチ
+- `feature/*` - 機能ブランチ
+- `fix/*` - バグ修正ブランチ
 
-### Commit Message Convention
+### コミットメッセージ規約
 
 ```
 <type>(<scope>): <subject>
 
-<body>
-
-<footer>
-```
-
-**Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-**Example**:
-
-```
-feat(auth): implement user login (REQ-AUTH-001)
-
-Add login functionality with email and password authentication.
-Session created with 24-hour expiry.
-
-Closes REQ-AUTH-001
+Types: feat, fix, docs, style, refactor, test, chore
 ```
 
 ---
 
-## Constitutional Compliance
-
-This structure enforces:
-
-- **Article I**: Library-first pattern in `lib/`
-- **Article II**: CLI interfaces per library
-- **Article III**: Test structure supports Test-First
-- **Article VI**: Steering files maintain project memory
-
----
-
-## Changelog
-
-### Version 1.1 (Planned)
-
-- [Future changes]
-
----
-
-**Last Updated**: 2025-12-03
-**Maintained By**: {{MAINTAINER}}
+**Last Updated**: 2025-12-04
+**Maintained By**: GitHub Copilot / nahisaho
