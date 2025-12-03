@@ -119,7 +119,14 @@ class Indexer:
         try:
             # Get files to index
             if incremental:
-                files = await self._get_changed_files(repo_path)
+                # Check if index already exists (has entities)
+                stats = await self._engine.get_statistics()
+                if stats.entity_count == 0:
+                    # No existing index - do full scan for initial indexing
+                    files = self._get_all_files(repo_path)
+                else:
+                    # Existing index - only get changed files
+                    files = await self._get_changed_files(repo_path)
             else:
                 files = self._get_all_files(repo_path)
 

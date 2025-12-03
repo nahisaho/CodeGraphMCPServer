@@ -688,10 +688,10 @@ def cmd_watch(args: argparse.Namespace) -> int:
         return 1
 
     from codegraph_mcp.core.indexer import Indexer
-    from codegraph_mcp.core.parser import CodeParser
+    from codegraph_mcp.core.parser import ASTParser
 
     # Build set of supported extensions from parser
-    supported_extensions = set(CodeParser.LANGUAGE_EXTENSIONS.keys())
+    supported_extensions = set(ASTParser.LANGUAGE_EXTENSIONS.keys())
 
     async def _watch() -> int:
         indexer = Indexer()

@@ -58,6 +58,9 @@ class JavaExtractor(BaseExtractor):
         source_code: str,
     ) -> ParseResult:
         """Extract entities and relations from Java AST."""
+        # Set source bytes for correct byte offset handling
+        self._set_source(source_code)
+
         entities: list[Entity] = []
         relations: list[Relation] = []
 

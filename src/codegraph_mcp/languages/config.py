@@ -39,6 +39,9 @@ class BaseExtractor(ABC):
 
     config: LanguageConfig
 
+    # Store source as bytes for correct byte offset slicing
+    _source_bytes: bytes = b""
+
     @abstractmethod
     def extract(
         self,
@@ -59,6 +62,10 @@ class BaseExtractor(ABC):
         """
         pass
 
+    def _set_source(self, source_code: str) -> None:
+        """Set source code and cache bytes for correct offset handling."""
+        self._source_bytes = source_code.encode("utf-8")
+
     def _generate_entity_id(
         self,
         file_path: Path,
@@ -69,7 +76,11 @@ class BaseExtractor(ABC):
         return f"{file_path}::{name}::{line}"
 
     def _get_node_text(self, node: Any, source_code: str) -> str:
-        """Get text content of a node."""
+        """Get text content of a node using byte offsets."""
+        # Use cached bytes for correct slicing with byte offsets
+        if self._source_bytes:
+            return self._source_bytes[node.start_byte:node.end_byte].decode("utf-8")
+        # Fallback (may be incorrect for non-ASCII)
         return source_code[node.start_byte:node.end_byte]
 
     def _get_docstring(self, node: Any, source_code: str) -> str | None:
