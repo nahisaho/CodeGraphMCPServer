@@ -391,6 +391,7 @@ async def _dispatch_tool(
     config: Config,
 ) -> Any:
     """Dispatch tool call to appropriate handler."""
+    import time
 
     handlers = {
         "query_codebase": _handle_query_codebase,
@@ -411,8 +412,16 @@ async def _dispatch_tool(
 
     handler = handlers.get(name)
     if handler:
-        return await handler(args, engine, config)
+        start_time = time.perf_counter()
+        logger.debug(f"Dispatching {name} with args: {list(args.keys())}")
 
+        result = await handler(args, engine, config)
+
+        elapsed = (time.perf_counter() - start_time) * 1000
+        logger.debug(f"Tool {name} completed in {elapsed:.2f}ms")
+        return result
+
+    logger.warning(f"Unknown tool requested: {name}")
     return {"error": f"Unknown tool: {name}"}
 
 

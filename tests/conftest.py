@@ -220,11 +220,20 @@ def test_config() -> dict:
 # ========================
 
 @pytest.fixture
-async def memory_db():
-    """インメモリSQLiteデータベース"""
-    # Note: 実際の実装は storage/ モジュールに依存
-    # 現時点ではスタブとして定義
-    yield None
+async def memory_db(temp_dir: Path):
+    """インメモリ風SQLiteデータベース（一時ファイル使用）"""
+    from codegraph_mcp.core.graph import GraphEngine
+
+    # Create .codegraph directory
+    codegraph_dir = temp_dir / ".codegraph"
+    codegraph_dir.mkdir(exist_ok=True)
+
+    engine = GraphEngine(temp_dir)
+    await engine.initialize()
+
+    yield engine
+
+    await engine.close()
 
 
 # ========================
@@ -232,8 +241,35 @@ async def memory_db():
 # ========================
 
 @pytest.fixture
-async def mcp_server():
+async def mcp_server(temp_dir: Path):
     """MCPサーバーインスタンス"""
-    # Note: 実際の実装は server.py に依存
-    # 現時点ではスタブとして定義
-    yield None
+    from codegraph_mcp.config import Config
+    from codegraph_mcp.server import create_server
+
+    # Create .codegraph directory
+    codegraph_dir = temp_dir / ".codegraph"
+    codegraph_dir.mkdir(exist_ok=True)
+
+    config = Config(repo_path=temp_dir)
+    server = create_server(config)
+
+    yield server
+
+
+@pytest.fixture
+async def engine_manager(temp_dir: Path):
+    """EngineManagerインスタンス"""
+    from codegraph_mcp.core.engine_manager import EngineManager
+
+    # Clear any existing instances
+    EngineManager._instances.clear()
+
+    # Create .codegraph directory
+    codegraph_dir = temp_dir / ".codegraph"
+    codegraph_dir.mkdir(exist_ok=True)
+
+    manager = await EngineManager.get_instance(temp_dir)
+
+    yield manager
+
+    await EngineManager.close_all()
