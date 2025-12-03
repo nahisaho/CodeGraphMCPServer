@@ -7,12 +7,50 @@ Requirements: REQ-TLS-001 ~ REQ-TLS-014
 Design Reference: design-mcp-interface.md §2
 """
 
+from pathlib import Path
 from typing import Any
 
 from mcp.server import Server
 from mcp.types import TextContent, Tool
 
 from codegraph_mcp.config import Config
+from codegraph_mcp.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+def _validate_path(path_str: str, repo_root: "Path") -> "Path | None":
+    """
+    Validate and resolve a file path, preventing path traversal attacks.
+
+    Args:
+        path_str: The requested path (relative or absolute)
+        repo_root: The repository root directory
+
+    Returns:
+        Resolved Path if valid, None if path traversal detected
+    """
+    from pathlib import Path
+
+    try:
+        # Handle both relative and absolute paths
+        if Path(path_str).is_absolute():
+            resolved = Path(path_str).resolve()
+        else:
+            resolved = (repo_root / path_str).resolve()
+
+        # Security check: ensure path is within repository
+        repo_resolved = repo_root.resolve()
+        if not str(resolved).startswith(str(repo_resolved)):
+            logger.warning(
+                f"Path traversal attempt blocked: {path_str} -> {resolved}"
+            )
+            return None
+
+        return resolved
+    except (ValueError, OSError) as e:
+        logger.warning(f"Invalid path '{path_str}': {e}")
+        return None
 
 
 def register(server: Server, config: Config) -> None:
@@ -273,17 +311,21 @@ def register(server: Server, config: Config) -> None:
             ),
             Tool(
                 name="execute_shell_command",
-                description="Execute a shell command in repository context",
+                description=(
+                    "Execute a shell command in repository context. "
+                    "Only safe commands (git, grep, find, python, etc.) are allowed. "
+                    "Dangerous operations (rm, sudo, curl, pipes) are blocked."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "command": {
                             "type": "string",
-                            "description": "Shell command to execute",
+                            "description": "Shell command to execute (whitelist only)",
                         },
                         "timeout": {
                             "type": "integer",
-                            "description": "Timeout in seconds",
+                            "description": "Timeout in seconds (max 60)",
                             "default": 30,
                         },
                     },
@@ -294,15 +336,51 @@ def register(server: Server, config: Config) -> None:
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-        """Handle tool calls."""
+        """Handle tool calls with proper error handling."""
         from codegraph_mcp.core.graph import GraphEngine
 
+        logger.info(f"Tool call: {name}")
+
         engine = GraphEngine(config.repo_path)
-        await engine.initialize()
+
+        try:
+            await engine.initialize()
+        except FileNotFoundError as e:
+            logger.error(f"Database not found: {e}")
+            return [TextContent(
+                type="text",
+                text=str({"error": "Index not found. Run 'codegraph index' first."})
+            )]
+        except PermissionError as e:
+            logger.error(f"Permission denied: {e}")
+            return [TextContent(
+                type="text",
+                text=str({"error": f"Permission denied: {e}"})
+            )]
 
         try:
             result = await _dispatch_tool(name, arguments, engine, config)
+            logger.info(f"Tool {name} completed successfully")
             return [TextContent(type="text", text=str(result))]
+        except KeyError as e:
+            logger.error(f"Missing required argument: {e}")
+            return [TextContent(
+                type="text",
+                text=str({"error": f"Missing required argument: {e}"})
+            )]
+        except ValueError as e:
+            logger.error(f"Invalid argument value: {e}")
+            return [TextContent(
+                type="text",
+                text=str({"error": f"Invalid argument: {e}"})
+            )]
+        except Exception as e:
+            # Log unexpected errors with full traceback for debugging
+            logger.exception(f"Unexpected error in tool {name}: {e}")
+            return [TextContent(
+                type="text",
+                text=str({"error": f"Internal error: {type(e).__name__}"})
+            )]
         finally:
             await engine.close()
 
@@ -487,13 +565,21 @@ async def _handle_read_file(
     engine: Any,
     config: Config,
 ) -> dict[str, Any]:
-    """Handle read_file_content tool."""
+    """Handle read_file_content tool with path traversal protection."""
+    file_path = _validate_path(args["file_path"], config.repo_path)
+    if file_path is None:
+        return {"error": "Invalid path: access denied outside repository"}
 
-    file_path = config.repo_path / args["file_path"]
     if not file_path.exists():
         return {"error": "File not found"}
 
-    content = file_path.read_text()
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except PermissionError:
+        return {"error": "Permission denied"}
+    except UnicodeDecodeError:
+        return {"error": "File is not valid UTF-8 text"}
+
     lines = content.split("\n")
 
     start = args.get("start_line", 1) - 1
@@ -511,8 +597,14 @@ async def _handle_get_file_structure(
     engine: Any,
     config: Config,
 ) -> dict[str, Any]:
-    """Handle get_file_structure tool."""
-    return await _handle_analyze_module(args, engine, config)
+    """Handle get_file_structure tool with path validation."""
+    file_path = _validate_path(args["file_path"], config.repo_path)
+    if file_path is None:
+        return {"error": "Invalid path: access denied outside repository"}
+
+    # Use validated path for analysis
+    validated_args = {**args, "file_path": str(file_path.relative_to(config.repo_path))}
+    return await _handle_analyze_module(validated_args, engine, config)
 
 
 async def _handle_global_search(
@@ -631,20 +723,88 @@ async def _handle_reindex(
     }
 
 
+# Allowed commands whitelist for security
+_ALLOWED_COMMANDS = frozenset({
+    # Git commands (read-only)
+    "git", "git-log", "git-status", "git-diff", "git-show", "git-branch",
+    # Code analysis tools
+    "grep", "find", "wc", "head", "tail", "cat", "less",
+    # Python tools
+    "python", "python3", "pip", "pip3", "pytest", "mypy", "ruff", "black",
+    # Node.js tools
+    "node", "npm", "npx", "yarn", "pnpm",
+    # Build tools
+    "make", "cargo", "go",
+    # Misc safe commands
+    "ls", "tree", "file", "stat", "echo", "pwd",
+})
+
+# Dangerous patterns that should be blocked
+_DANGEROUS_PATTERNS = (
+    "rm ", "rm\t", "rmdir",
+    "sudo", "su ",
+    "chmod", "chown",
+    "curl", "wget",
+    ">", ">>", "|",  # Redirections and pipes
+    "$(", "`",  # Command substitution
+    "&&", "||", ";",  # Command chaining
+    "eval", "exec",
+    "/etc/", "/usr/", "/bin/", "/sbin/",
+)
+
+
+def _validate_command(command: str) -> tuple[bool, str]:
+    """
+    Validate shell command against security rules.
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    command_stripped = command.strip()
+
+    # Check for dangerous patterns
+    for pattern in _DANGEROUS_PATTERNS:
+        if pattern in command_stripped:
+            return False, f"Dangerous pattern '{pattern}' not allowed"
+
+    # Extract base command
+    parts = command_stripped.split()
+    if not parts:
+        return False, "Empty command"
+
+    base_cmd = parts[0].split("/")[-1]  # Handle full paths
+
+    # Check whitelist
+    if base_cmd not in _ALLOWED_COMMANDS:
+        return False, f"Command '{base_cmd}' not in allowed list"
+
+    return True, ""
+
+
 async def _handle_execute_command(
     args: dict[str, Any],
     engine: Any,
     config: Config,
 ) -> dict[str, Any]:
-    """Handle execute_shell_command tool."""
+    """Handle execute_shell_command tool with security restrictions."""
     import asyncio
+    import shlex
     import subprocess
 
-    timeout = args.get("timeout", 30)
+    command = args["command"]
+    timeout = min(args.get("timeout", 30), 60)  # Cap at 60 seconds
+
+    # Validate command
+    is_valid, error = _validate_command(command)
+    if not is_valid:
+        return {"error": f"Command rejected: {error}"}
 
     try:
-        proc = await asyncio.create_subprocess_shell(
-            args["command"],
+        # Use shlex.split for safer command parsing (no shell=True)
+        cmd_parts = shlex.split(command)
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd_parts,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=config.repo_path,
@@ -656,8 +816,13 @@ async def _handle_execute_command(
 
         return {
             "exit_code": proc.returncode,
-            "stdout": stdout.decode(),
-            "stderr": stderr.decode(),
+            "stdout": stdout.decode(errors="replace"),
+            "stderr": stderr.decode(errors="replace"),
         }
-    except TimeoutError:
+    except asyncio.TimeoutError:
+        proc.kill()
         return {"error": f"Command timed out after {timeout}s"}
+    except FileNotFoundError:
+        return {"error": f"Command not found: {cmd_parts[0]}"}
+    except PermissionError:
+        return {"error": "Permission denied"}
