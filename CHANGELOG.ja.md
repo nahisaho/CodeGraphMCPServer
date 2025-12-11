@@ -7,6 +7,35 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に基づいており、
 このプロジェクトは [セマンティックバージョニング](https://semver.org/lang/ja/) に準拠しています。
 
+## [0.8.0] - 2025-12-11
+
+### 追加
+
+#### 新言語サポート（4言語）
+- **Kotlin** (`kotlin.py`): クラス、インターフェース、オブジェクト、関数、プロパティ
+  - 対応拡張子: `.kt`, `.kts`
+  - tree-sitter-kotlin >= 1.0.0
+- **Swift** (`swift.py`): クラス、構造体、プロトコル、関数、エクステンション
+  - 対応拡張子: `.swift`
+  - tree-sitter-swift >= 0.0.1
+- **Scala** (`scala.py`): クラス、トレイト、オブジェクト、関数
+  - 対応拡張子: `.scala`, `.sc`
+  - tree-sitter-scala >= 0.20.0
+- **Lua** (`lua.py`): 関数、ローカル関数、テーブル代入
+  - 対応拡張子: `.lua`
+  - tree-sitter-lua >= 0.1.0
+
+### 変更
+- 対応言語数: **16言語**（12言語から増加）
+- parser.pyに新言語のLANGUAGE_EXTENSIONSを追加
+- `__init__.py`に新エクストラクタ登録を追加
+
+### テスト
+- Kotlin、Swift、Scala、Lua エクストラクタ用に26件の新規テストを追加
+- 合計: **334 passed**, 1 skipped
+
+---
+
 ## [0.7.1] - 2025-11-27
 
 ### 追加

@@ -7,6 +7,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-12-11
+
+### Added
+
+#### New Language Support (4 languages)
+- **Kotlin** (`kotlin.py`): Classes, interfaces, objects, functions, properties
+  - Supported extensions: `.kt`, `.kts`
+  - tree-sitter-kotlin >= 1.0.0
+- **Swift** (`swift.py`): Classes, structs, protocols, functions, extensions
+  - Supported extensions: `.swift`
+  - tree-sitter-swift >= 0.0.1
+- **Scala** (`scala.py`): Classes, traits, objects, functions
+  - Supported extensions: `.scala`, `.sc`
+  - tree-sitter-scala >= 0.20.0
+- **Lua** (`lua.py`): Functions, local functions, table assignments
+  - Supported extensions: `.lua`
+  - tree-sitter-lua >= 0.1.0
+
+### Changed
+- Total supported languages: **16** (was 12)
+- Updated parser.py with LANGUAGE_EXTENSIONS for new languages
+- Updated `__init__.py` with new extractor registrations
+
+### Tests
+- Added 26 new tests for Kotlin, Swift, Scala, Lua extractors
+- Total: **334 passed**, 1 skipped
+
+---
+
 ## [0.7.1] - 2025-11-27
 
 ### Added
