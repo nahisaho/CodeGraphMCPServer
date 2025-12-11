@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-12-11
-**Version**: 2.7
-**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.7.1)
+**Version**: 2.8
+**Synced With**: requirements-specification.md, design-*.md, CHANGELOG.md (v0.7.3)
 
 ---
 

@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-12-11
-**Version**: 2.6
-**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.7.1)
+**Version**: 2.7
+**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.7.3)
 
 ---
 
