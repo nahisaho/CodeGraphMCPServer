@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-12-11
-**Version**: 2.7
-**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.7.3)
+**Version**: 2.8
+**Synced With**: design-adr.md (ADR-001〜010), pyproject.toml (v0.8.0)
 
 ---
 
@@ -55,6 +55,10 @@
 | tree-sitter-cpp | >=0.21.0 | C++解析 | ✅ v0.3.0 | |
 | tree-sitter-hcl | >=0.21.0 | HCL (Terraform)解析 | ✅ v0.3.0 | |
 | tree-sitter-ruby | >=0.21.0 | Ruby解析 | ✅ v0.3.0 | |
+| tree-sitter-kotlin | >=1.0.0 | Kotlin解析 | ✅ v0.8.0 | |
+| tree-sitter-swift | >=0.0.1 | Swift解析 | ✅ v0.8.0 | |
+| tree-sitter-scala | >=0.20.0 | Scala解析 | ✅ v0.8.0 | |
+| tree-sitter-lua | >=0.1.0 | Lua解析 | ✅ v0.8.0 | |
 
 ### Database & Storage (ADR-002)
 

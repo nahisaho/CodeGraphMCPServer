@@ -2,8 +2,8 @@
 
 **Project**: CodeGraph MCP Server
 **Last Updated**: 2025-12-11
-**Version**: 2.7
-**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.7.3)
+**Version**: 2.8
+**Synced With**: design-architecture-overview.md, design-core-engine.md, design-mcp-interface.md, design-storage.md, pyproject.toml (v0.8.0)
 
 ---
 
