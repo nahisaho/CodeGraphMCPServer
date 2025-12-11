@@ -33,7 +33,7 @@ CodeGraphMCPServer is an MCP server that understands codebase structure and prov
 | 📚 **4 MCP Resources** | Entities, files, communities, statistics |
 | 💬 **6 MCP Prompts** | Code review, feature implementation, debug assistance |
 | ⚡ **Fast Indexing** | 100K lines in under 30 seconds, incremental updates in under 2 seconds |
-| 🌐 **Multi-language Support** | Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C, C++, HCL, Ruby (12 languages) |
+| 🌐 **Multi-language Support** | Python, TypeScript, JavaScript, Rust, Go, Java, PHP, C#, C, C++, HCL, Ruby, Kotlin, Swift, Scala, Lua (16 languages) |
 
 ## Requirements
 

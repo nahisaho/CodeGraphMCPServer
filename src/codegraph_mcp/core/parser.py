@@ -163,6 +163,8 @@ class ASTParser:
         ".tsx": "typescript",
         ".js": "javascript",
         ".jsx": "javascript",
+        ".mjs": "javascript",
+        ".cjs": "javascript",
         ".rs": "rust",
         ".c": "cpp",
         ".cpp": "cpp",
@@ -171,6 +173,23 @@ class ASTParser:
         ".h": "cpp",
         ".hpp": "cpp",
         ".hxx": "cpp",
+        ".go": "go",
+        ".java": "java",
+        ".php": "php",
+        ".cs": "csharp",
+        ".rb": "ruby",
+        ".rake": "ruby",
+        ".gemspec": "ruby",
+        ".tf": "hcl",
+        ".hcl": "hcl",
+        ".tfvars": "hcl",
+        # v0.8.0: New languages
+        ".kt": "kotlin",
+        ".kts": "kotlin",
+        ".swift": "swift",
+        ".scala": "scala",
+        ".sc": "scala",
+        ".lua": "lua",
     }
 
     def __init__(self) -> None:
@@ -184,9 +203,20 @@ class ASTParser:
             return
 
         try:
+            import tree_sitter_c_sharp
             import tree_sitter_cpp
+            import tree_sitter_go
+            import tree_sitter_hcl
+            import tree_sitter_java
+            import tree_sitter_javascript
+            import tree_sitter_kotlin
+            import tree_sitter_lua
+            import tree_sitter_php
             import tree_sitter_python
+            import tree_sitter_ruby
             import tree_sitter_rust
+            import tree_sitter_scala
+            import tree_sitter_swift
             import tree_sitter_typescript
             from tree_sitter import Language, Parser
 
@@ -197,18 +227,52 @@ class ASTParser:
             self._parsers["typescript"] = Parser(
                 Language(tree_sitter_typescript.language_typescript())
             )
+            self._parsers["javascript"] = Parser(
+                Language(tree_sitter_javascript.language())
+            )
             self._parsers["rust"] = Parser(
                 Language(tree_sitter_rust.language())
             )
             self._parsers["cpp"] = Parser(
                 Language(tree_sitter_cpp.language())
             )
+            self._parsers["go"] = Parser(
+                Language(tree_sitter_go.language())
+            )
+            self._parsers["java"] = Parser(
+                Language(tree_sitter_java.language())
+            )
+            self._parsers["php"] = Parser(
+                Language(tree_sitter_php.language_php())
+            )
+            self._parsers["csharp"] = Parser(
+                Language(tree_sitter_c_sharp.language())
+            )
+            self._parsers["ruby"] = Parser(
+                Language(tree_sitter_ruby.language())
+            )
+            self._parsers["hcl"] = Parser(
+                Language(tree_sitter_hcl.language())
+            )
+            # v0.8.0: New languages
+            self._parsers["kotlin"] = Parser(
+                Language(tree_sitter_kotlin.language())
+            )
+            self._parsers["swift"] = Parser(
+                Language(tree_sitter_swift.language())
+            )
+            self._parsers["scala"] = Parser(
+                Language(tree_sitter_scala.language())
+            )
+            self._parsers["lua"] = Parser(
+                Language(tree_sitter_lua.language())
+            )
 
             self._initialized = True
         except ImportError as e:
             raise ImportError(
                 f"Tree-sitter language bindings not installed: {e}. "
-                "Install with: pip install tree-sitter-python tree-sitter-typescript tree-sitter-rust tree-sitter-cpp"
+                "Install with: pip install codegraph-mcp-server"
             )
 
     def detect_language(self, file_path: Path) -> str | None:
